@@ -1,22 +1,31 @@
 package alicanteweb.pelisapp.controller;
 
+import alicanteweb.pelisapp.dto.PeliculaDetailDTO;
+import alicanteweb.pelisapp.dto.ResenaDTO;
 import alicanteweb.pelisapp.entity.Pelicula;
+import alicanteweb.pelisapp.entity.Resena;
+import alicanteweb.pelisapp.mapper.ResenaMapper;
 import alicanteweb.pelisapp.repository.PeliculaRepository;
+import alicanteweb.pelisapp.repository.ResenaRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/peliculas")
 public class PeliculaController {
 
     private final PeliculaRepository peliculaRepository;
+    private final ResenaRepository resenaRepository;
 
-    public PeliculaController(PeliculaRepository peliculaRepository) {
+    public PeliculaController(PeliculaRepository peliculaRepository, ResenaRepository resenaRepository) {
         this.peliculaRepository = peliculaRepository;
+        this.resenaRepository = resenaRepository;
     }
 
     @GetMapping
@@ -26,8 +35,14 @@ public class PeliculaController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> get(@PathVariable Integer id) {
-        Optional<Pelicula> p = peliculaRepository.findById(id);
-        return p.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        Optional<Pelicula> pOpt = peliculaRepository.findById(id);
+        if (pOpt.isEmpty()) return ResponseEntity.notFound().build();
+        Pelicula p = pOpt.get();
+        Double avg = Objects.requireNonNullElse(resenaRepository.avgPuntuacionByPeliculaId(id), 0.0);
+        List<Resena> resenas = resenaRepository.findByPeliculaIdFetchUsuario(id);
+        List<ResenaDTO> resenasDto = resenas.stream().map(ResenaMapper::toDto).collect(Collectors.toList());
+        PeliculaDetailDTO dto = new PeliculaDetailDTO(p, avg, resenasDto);
+        return ResponseEntity.ok(dto);
     }
 
     @PostMapping
@@ -65,4 +80,3 @@ public class PeliculaController {
 
     public record PeliculaDTO(String titulo, Integer anio, Integer duracion, String sinopsis){}
 }
-

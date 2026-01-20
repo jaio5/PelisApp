@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -51,20 +52,46 @@ public class UsuarioService {
 
             // Etiquetas simples según niveles/umbral (ejemplo)
             Set<String> etiquetas = new HashSet<>(u.getEtiquetas());
-            if (avg != null && avg >= 4.5) {
-                etiquetas.add("TopCritic");
-            } else {
-                etiquetas.remove("TopCritic");
-            }
-            // Si tiene nivelCritico alto añadir etiqueta de confianza
-            if (u.getNivelCritico() != null && u.getNivelCritico() >= 4) {
-                etiquetas.add("ConfianzaAlta");
-            } else {
-                etiquetas.remove("ConfianzaAlta");
-            }
+            // sustituimos if/else duplicados por helper updateEtiqueta
+            updateEtiqueta(etiquetas, "TopCritic", avg != null && avg >= 4.5);
+            updateEtiqueta(etiquetas, "ConfianzaAlta", u.getNivelCritico() != null && u.getNivelCritico() >= 4);
+
             u.setEtiquetas(etiquetas);
 
             usuarioRepository.save(u);
+        }
+    }
+
+    @Transactional
+    public void followUser(Integer userId, Integer targetUserId) {
+        if (userId.equals(targetUserId)) {
+            throw new IllegalArgumentException("No puedes seguirte a ti mismo");
+        }
+        Usuario user = usuarioRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        Usuario target = usuarioRepository.findById(targetUserId).orElseThrow(() -> new IllegalArgumentException("Usuario objetivo no encontrado"));
+        user.getSeguidos().add(target);
+        usuarioRepository.save(user);
+    }
+
+    @Transactional
+    public void unfollowUser(Integer userId, Integer targetUserId) {
+        Usuario user = usuarioRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        Usuario target = usuarioRepository.findById(targetUserId).orElseThrow(() -> new IllegalArgumentException("Usuario objetivo no encontrado"));
+        user.getSeguidos().remove(target);
+        usuarioRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Usuario> getProfile(Integer usuarioId) {
+        return usuarioRepository.findById(usuarioId);
+    }
+
+    // Helper para añadir o quitar una etiqueta en el conjunto según el flag 'present'
+    private void updateEtiqueta(Set<String> etiquetas, String etiqueta, boolean present) {
+        if (present) {
+            etiquetas.add(etiqueta);
+        } else {
+            etiquetas.remove(etiqueta);
         }
     }
 }

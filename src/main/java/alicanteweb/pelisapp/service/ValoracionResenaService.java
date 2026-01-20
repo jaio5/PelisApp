@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+
 @Service
 public class ValoracionResenaService {
 
@@ -45,19 +46,9 @@ public class ValoracionResenaService {
         }
 
         Optional<ValoracionResena> existing = valoracionResenaRepository.findByResenaIdAndValoradorId(resenaId, valoradorId);
-        ValoracionResena v;
-        if (existing.isPresent()) {
-            // actualizar voto existente
-            v = existing.get();
-            v.setPuntuacion(puntuacion);
-            v.setComentario(comentario);
-        } else {
-            v = new ValoracionResena();
-            v.setResena(resena);
-            v.setValorador(valorador);
-            v.setPuntuacion(puntuacion);
-            v.setComentario(comentario);
-        }
+
+        // Extraer la creación/actualización en un método privado para evitar duplicación
+        ValoracionResena v = buildOrUpdateValoracion(existing, resena, valorador, puntuacion, comentario);
 
         ValoracionResena saved = valoracionResenaRepository.save(v);
 
@@ -74,5 +65,20 @@ public class ValoracionResenaService {
         Integer autorId = v.getResena().getUsuario().getId();
         valoracionResenaRepository.delete(v);
         usuarioService.recalcularNivelCritico(autorId);
+    }
+
+    // Método privado extraído para construir o actualizar una ValoracionResena
+    private ValoracionResena buildOrUpdateValoracion(Optional<ValoracionResena> existing, Resena resena, Usuario valorador, Integer puntuacion, String comentario) {
+        ValoracionResena v;
+        if (existing.isPresent()) {
+            v = existing.get();
+        } else {
+            v = new ValoracionResena();
+            v.setResena(resena);
+            v.setValorador(valorador);
+        }
+        v.setPuntuacion(puntuacion);
+        v.setComentario(comentario);
+        return v;
     }
 }
