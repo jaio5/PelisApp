@@ -35,6 +35,9 @@ public class Director {
     @Column(name = "biografia")
     private String biografia;
 
+    @Column(name = "foto_url")
+    private String fotoUrl;
+
     @ManyToMany(mappedBy = "directores")
     private Set<Pelicula> peliculas = new LinkedHashSet<>();
 

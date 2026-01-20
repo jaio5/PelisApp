@@ -1,5 +1,7 @@
 package alicanteweb.pelisapp.controller;
 
+import alicanteweb.pelisapp.dto.ActorDTO;
+import alicanteweb.pelisapp.dto.DirectorDTO;
 import alicanteweb.pelisapp.dto.PeliculaDetailDTO;
 import alicanteweb.pelisapp.dto.ResenaDTO;
 import alicanteweb.pelisapp.entity.Pelicula;
@@ -37,11 +39,15 @@ public class PeliculaController {
         Optional<Pelicula> pOpt = peliculaRepository.findById(id);
         if (pOpt.isEmpty()) return ResponseEntity.notFound().build();
         Pelicula p = pOpt.get();
-        Optional<Double> avgOpt = resenaRepository.avgPuntuacionByPeliculaId(id);
-        Double avg = avgOpt.orElse(0.0);
+        double avg = resenaRepository.avgPuntuacionByPeliculaId(id);
         List<Resena> resenas = resenaRepository.findByPeliculaIdFetchUsuario(id);
         List<ResenaDTO> resenasDto = resenas.stream().map(ResenaMapper::toDto).collect(Collectors.toList());
-        PeliculaDetailDTO dto = new PeliculaDetailDTO(p, avg, resenasDto);
+
+        // Mapear actores y directores a DTOs (aseguramos accesos a lazy collections)
+        List<ActorDTO> actores = p.getActores().stream().map(a -> new ActorDTO(a.getId(), a.getNombre(), a.getFotoUrl())).collect(Collectors.toList());
+        List<DirectorDTO> directores = p.getDirectores().stream().map(d -> new DirectorDTO(d.getId(), d.getNombre(), d.getFotoUrl())).collect(Collectors.toList());
+
+        PeliculaDetailDTO dto = new PeliculaDetailDTO(p, avg, resenasDto, actores, directores);
         return ResponseEntity.ok(dto);
     }
 

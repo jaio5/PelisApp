@@ -1,7 +1,9 @@
 package alicanteweb.pelisapp.service;
 
+import alicanteweb.pelisapp.entity.Etiqueta;
 import alicanteweb.pelisapp.entity.Role;
 import alicanteweb.pelisapp.entity.Usuario;
+import alicanteweb.pelisapp.repository.EtiquetaRepository;
 import alicanteweb.pelisapp.repository.UsuarioRepository;
 import alicanteweb.pelisapp.repository.ValoracionResenaRepository;
 import org.springframework.stereotype.Service;
@@ -16,22 +18,21 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final ValoracionResenaRepository valoracionResenaRepository;
+    private final EtiquetaRepository etiquetaRepository;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, ValoracionResenaRepository valoracionResenaRepository) {
+    public UsuarioService(UsuarioRepository usuarioRepository, ValoracionResenaRepository valoracionResenaRepository, EtiquetaRepository etiquetaRepository) {
         this.usuarioRepository = usuarioRepository;
         this.valoracionResenaRepository = valoracionResenaRepository;
+        this.etiquetaRepository = etiquetaRepository;
     }
 
     @Transactional
     public void recalcularNivelCritico(Integer usuarioId) {
-        Double avg = valoracionResenaRepository.avgPuntuacionRecibidaByUsuarioId(usuarioId);
-        int nuevoNivel;
-        if (avg == null) {
-            nuevoNivel = 1; // sin valoraciones recibidas
-        } else {
-            // avg está entre 1..5; mapear directamente a 1..5
-            nuevoNivel = Math.max(1, Math.min(5, (int) Math.round(avg)));
-        }
+        // avg viene como double (COALESCE en la consulta), por tanto no es null
+        double avg = valoracionResenaRepository.avgPuntuacionRecibidaByUsuarioId(usuarioId);
+
+        int nuevoNivel = Math.max(1, Math.min(5, (int) Math.round(avg)));
+
         Usuario u = usuarioRepository.findById(usuarioId).orElse(null);
         if (u != null) {
             if (!Integer.valueOf(nuevoNivel).equals(u.getNivelCritico())) {
@@ -41,20 +42,20 @@ public class UsuarioService {
             // Asignar roles según average recibido
             Set<Role> newRoles = new HashSet<>();
             newRoles.add(Role.ROLE_USER);
-            if (avg != null) {
-                if (avg >= 4.5) {
-                    newRoles.add(Role.ROLE_EXPERTO);
-                } else if (avg >= 3.5) {
-                    newRoles.add(Role.ROLE_CRITICO);
-                }
+            if (avg >= 4.5) {
+                newRoles.add(Role.ROLE_EXPERTO);
+            } else if (avg >= 3.5) {
+                newRoles.add(Role.ROLE_CRITICO);
             }
             u.setRoles(newRoles);
 
-            // Etiquetas simples según niveles/umbral (ejemplo)
-            Set<String> etiquetas = new HashSet<>(u.getEtiquetas());
-            // sustituimos if/else duplicados por helper updateEtiqueta
-            updateEtiqueta(etiquetas, "TopCritic", avg != null && avg >= 4.5);
-            updateEtiqueta(etiquetas, "ConfianzaAlta", u.getNivelCritico() != null && u.getNivelCritico() >= 4);
+            // Etiquetas como entidades según reglas
+            Set<Etiqueta> etiquetas = new HashSet<>(u.getEtiquetas());
+
+            // regla: reseñas publicadas
+            // We don't have ResenaRepository injected here; rely on existing etiquetas rules elsewhere or expand constructor. For now use avg and nivel.
+            updateEtiqueta(etiquetas, "media_alta", avg >= 4.5, "Crítico recomendado", "Tu media de puntuación es muy alta");
+            updateEtiqueta(etiquetas, "nivel_experto", u.getNivelCritico() != null && u.getNivelCritico() >= 3, "Crítico experto", "Nivel de crítico alto");
 
             u.setEtiquetas(etiquetas);
 
@@ -86,12 +87,22 @@ public class UsuarioService {
         return usuarioRepository.findById(usuarioId);
     }
 
-    // Helper para añadir o quitar una etiqueta en el conjunto según el flag 'present'
-    private void updateEtiqueta(Set<String> etiquetas, String etiqueta, boolean present) {
+    private void updateEtiqueta(Set<Etiqueta> etiquetas, String clave, boolean present, String nombre, String descripcion) {
         if (present) {
-            etiquetas.add(etiqueta);
+            Etiqueta e = findOrCreateEtiqueta(clave, nombre, descripcion);
+            etiquetas.add(e);
         } else {
-            etiquetas.remove(etiqueta);
+            etiquetas.removeIf(et -> clave.equals(et.getClave()));
         }
+    }
+
+    private Etiqueta findOrCreateEtiqueta(String clave, String nombre, String descripcion) {
+        return etiquetaRepository.findByClave(clave).orElseGet(() -> {
+            Etiqueta e = new Etiqueta();
+            e.setClave(clave);
+            e.setNombre(nombre != null ? nombre : clave);
+            e.setDescripcion(descripcion);
+            return etiquetaRepository.save(e);
+        });
     }
 }

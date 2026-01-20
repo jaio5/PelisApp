@@ -33,4 +33,10 @@ public class Actor {
     @Column(name = "biografia")
     private String biografia;
 
+    @Column(name = "tmdb_profile_path", length = 512)
+    private String tmdbProfilePath;
+
+    @Column(name = "foto_url")
+    private String fotoUrl;
+
 }

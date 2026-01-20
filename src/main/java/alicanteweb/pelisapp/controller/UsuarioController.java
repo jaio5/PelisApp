@@ -3,6 +3,7 @@ package alicanteweb.pelisapp.controller;
 import alicanteweb.pelisapp.dto.ResenaDTO;
 import alicanteweb.pelisapp.dto.UsuarioDetailDTO;
 import alicanteweb.pelisapp.dto.UsuarioProfileDTO;
+import alicanteweb.pelisapp.entity.Etiqueta;
 import alicanteweb.pelisapp.entity.Resena;
 import alicanteweb.pelisapp.entity.Usuario;
 import alicanteweb.pelisapp.mapper.ResenaMapper;
@@ -39,7 +40,7 @@ public class UsuarioController {
         if (uOpt.isEmpty()) return ResponseEntity.notFound().build();
         Usuario u = uOpt.get();
         Set<String> roles = u.getRoles().stream().map(Enum::name).collect(Collectors.toSet());
-        Set<String> etiquetas = u.getEtiquetas();
+        Set<String> etiquetas = u.getEtiquetas().stream().map(Etiqueta::getClave).collect(Collectors.toSet());
         // obtener reseñas del usuario (fetch pelicula para evitar lazy)
         List<Resena> resenas = resenaRepository.findByUsuarioIdFetchPelicula(id);
         List<ResenaDTO> resenasDto = resenas.stream().map(ResenaMapper::toDto).collect(Collectors.toList());

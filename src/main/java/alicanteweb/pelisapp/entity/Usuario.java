@@ -43,16 +43,19 @@ public class Usuario {
     @ManyToMany(mappedBy = "seguidos", fetch = FetchType.LAZY)
     private Set<Usuario> seguidores = new HashSet<>();
 
-    // ...nuevo: roles del usuario (USER, CRITIC, EXPERT) almacenados como colección de enums
+    // roles
     @ElementCollection(fetch = FetchType.LAZY, targetClass = Role.class)
     @CollectionTable(name = "usuario_roles", joinColumns = @JoinColumn(name = "usuario_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "role")
     private Set<Role> roles = new HashSet<>();
 
-    // ...nuevo: etiquetas/logros que el usuario puede ganar
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "usuario_etiquetas", joinColumns = @JoinColumn(name = "usuario_id"))
-    @Column(name = "etiqueta")
-    private Set<String> etiquetas = new HashSet<>();
+    // etiquetas/logros ahora referenciadas a entidad Etiqueta
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "usuario_etiquetas",
+            joinColumns = @JoinColumn(name = "usuario_id"),
+            inverseJoinColumns = @JoinColumn(name = "etiqueta_id")
+    )
+    private Set<Etiqueta> etiquetas = new HashSet<>();
 }
