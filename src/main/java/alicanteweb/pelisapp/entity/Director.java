@@ -28,10 +28,11 @@ public class Director {
     @JoinColumn(name = "pais_id")
     private Pais pais;
 
-    @Column(name = "biografia", length = Integer.MAX_VALUE)
+    @Lob
+    @Column(name = "biografia")
     private String biografia;
 
-    @ManyToMany(mappedBy = "directors")
+    @ManyToMany(mappedBy = "directores")
     private Set<Pelicula> peliculas = new LinkedHashSet<>();
 
 }

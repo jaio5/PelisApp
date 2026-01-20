@@ -26,7 +26,8 @@ public class Pelicula {
 
     private Integer duracion;
 
-    @Column(length = Integer.MAX_VALUE)
+    @Lob
+    @Column(name = "sinopsis")
     private String sinopsis;
 
     @ManyToOne(fetch = FetchType.LAZY)

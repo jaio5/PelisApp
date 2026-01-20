@@ -1,9 +1,11 @@
 package alicanteweb.pelisapp.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
@@ -29,14 +31,18 @@ public class Resena {
     @JoinColumn(name = "pelicula_id", nullable = false)
     private Pelicula pelicula;
 
-    @Column(name = "puntuacion")
+    // Cambiado: puntuación en estrellas 1..5
+    @Min(1)
+    @Max(5)
+    @Column(name = "puntuacion", nullable = false)
     private Integer puntuacion;
 
-    @Column(name = "comentario", length = Integer.MAX_VALUE)
+    @Lob
+    @Column(name = "comentario")
     private String comentario;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
-    @Column(name = "fecha")
+    @CreationTimestamp
+    @Column(name = "fecha", updatable = false)
     private Instant fecha;
 
 }

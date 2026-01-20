@@ -26,7 +26,8 @@ public class Actor {
     @JoinColumn(name = "pais_id")
     private Pais pais;
 
-    @Column(name = "biografia", length = Integer.MAX_VALUE)
+    @Lob
+    @Column(name = "biografia")
     private String biografia;
 
 }

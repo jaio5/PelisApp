@@ -20,7 +20,8 @@ public class Categoria {
     @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;
 
-    @Column(name = "descripcion", length = Integer.MAX_VALUE)
+    @Lob
+    @Column(name = "descripcion")
     private String descripcion;
 
     @ManyToMany(mappedBy = "categorias")
