@@ -11,7 +11,7 @@ import java.util.Set;
 @Getter
 @Setter
 @Entity
-@Table(name = "pelicula")
+@Table(name = "pelicula", indexes = { @Index(name = "idx_pelicula_tmdb_id", columnList = "tmdb_id") })
 public class Pelicula {
 
     @Id
@@ -35,6 +35,23 @@ public class Pelicula {
     private Pais pais;
 
     private LocalDate fechaEstreno;
+
+    // Campos TMDb
+    @Column(name = "tmdb_id", unique = true)
+    private Integer tmdbId;
+
+    @Column(name = "poster_path", length = 512)
+    private String posterPath;
+
+    @Column(name = "backdrop_path", length = 512)
+    private String backdropPath;
+
+    @Column(name = "original_language", length = 10)
+    private String originalLanguage;
+
+    private Double popularity;
+
+    private LocalDate releaseDate;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

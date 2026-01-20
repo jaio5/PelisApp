@@ -18,6 +18,9 @@ public class Director {
     @Column(name = "id", nullable = false)
     private Integer id;
 
+    @Column(name = "tmdb_id", unique = true)
+    private Integer tmdbId;
+
     @Column(name = "nombre", nullable = false, length = 150)
     private String nombre;
 
