@@ -12,7 +12,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -38,7 +37,8 @@ public class PeliculaController {
         Optional<Pelicula> pOpt = peliculaRepository.findById(id);
         if (pOpt.isEmpty()) return ResponseEntity.notFound().build();
         Pelicula p = pOpt.get();
-        Double avg = Objects.requireNonNullElse(resenaRepository.avgPuntuacionByPeliculaId(id), 0.0);
+        Optional<Double> avgOpt = resenaRepository.avgPuntuacionByPeliculaId(id);
+        Double avg = avgOpt.orElse(0.0);
         List<Resena> resenas = resenaRepository.findByPeliculaIdFetchUsuario(id);
         List<ResenaDTO> resenasDto = resenas.stream().map(ResenaMapper::toDto).collect(Collectors.toList());
         PeliculaDetailDTO dto = new PeliculaDetailDTO(p, avg, resenasDto);
