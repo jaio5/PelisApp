@@ -1,6 +1,5 @@
 package alicanteweb.pelisapp.controller;
 
-import alicanteweb.pelisapp.dto.PeliculaDTO;
 import alicanteweb.pelisapp.service.TmdbService;
 import alicanteweb.pelisapp.tmdb.TmdbSearchResult;
 import org.springframework.http.ResponseEntity;

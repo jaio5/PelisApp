@@ -45,6 +45,10 @@ public class AuthController {
         u.setPassword(passwordEncoder.encode(req.password()));
         Set<Role> roles = new HashSet<>();
         roles.add(Role.ROLE_USER);
+        // Si el usuario es "admin" (sin distinguir mayúsculas), asignar rol ADMIN adicional
+        if (req.username() != null && req.username().equalsIgnoreCase("admin")) {
+            roles.add(Role.ROLE_ADMIN);
+        }
         u.setRoles(roles);
         usuarioRepository.save(u);
         return ResponseEntity.ok("Usuario creado");

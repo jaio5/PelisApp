@@ -1,1 +1,24 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global styles: ensure full-height layout and base background */
+html, body, app-root {
+	height: 100%;
+	margin: 0;
+}
+
+body {
+	min-height: 100vh;
+	background: linear-gradient(135deg,#0f172a 0%,#071237 100%);
+	color: #e6eef8;
+	font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Make sure the Angular root content can grow */
+body > app-root {
+	display: block;
+	min-height: 100vh;
+}
+
+/* Utility */
+.visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
+
