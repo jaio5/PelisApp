@@ -101,13 +101,16 @@ public class TmdbService {
                                                         a.setTmdbId(cast.getId());
                                                         a.setNombre(cast.getName());
                                                         a.setBiografia(null);
+                                                        a.setTmdbProfilePath(cast.getProfilePath());
                                                         return actorRepository.save(a);
                                                     })) )
                                     .subscribeOn(Schedulers.boundedElastic())
                                     // si actor creado sin foto, descargar y guardar foto (reactivo)
                                     .flatMap(actor -> {
                                         if (actor.getFotoUrl() == null || actor.getFotoUrl().isBlank()) {
-                                            return imageDownloader.downloadAndStoreReactive(cast.getProfilePath(), "actors", cast.getId())
+                                            String profile = actor.getTmdbProfilePath();
+                                            if (profile == null) profile = cast.getProfilePath();
+                                            return imageDownloader.downloadAndStoreReactive(profile, "actors", cast.getId())
                                                     .flatMap(url -> Mono.fromCallable(() -> {
                                                         actor.setFotoUrl(url);
                                                         return actorRepository.save(actor);
@@ -118,7 +121,7 @@ public class TmdbService {
                             , 4)
                             .collectList());
 
-                    // procesar directores (simétrico, pero sin descarga porque TmdbCrew no expone profilePath en DTO)
+                    // procesar directores: ahora recogemos profilePath si está disponible y descargamos su foto
                     Mono<List<Director>> directoresMono = savedMovieMono.flatMap(savedMovie -> Flux.fromIterable(credits.getCrew())
                             .filter(crew -> "Director".equalsIgnoreCase(crew.getJob()))
                             .take(5)
@@ -129,9 +132,22 @@ public class TmdbService {
                                                         dir.setTmdbId(crew.getId());
                                                         dir.setNombre(crew.getName());
                                                         dir.setBiografia(null);
+                                                        dir.setTmdbProfilePath(crew.getProfilePath());
                                                         return directorRepository.save(dir);
                                                     })) )
                                     .subscribeOn(Schedulers.boundedElastic())
+                                    .flatMap(director -> {
+                                        if (director.getFotoUrl() == null || director.getFotoUrl().isBlank()) {
+                                            String profile = director.getTmdbProfilePath();
+                                            if (profile == null) profile = crew.getProfilePath();
+                                            return imageDownloader.downloadAndStoreReactive(profile, "directors", crew.getId())
+                                                    .flatMap(url -> Mono.fromCallable(() -> {
+                                                        director.setFotoUrl(url);
+                                                        return directorRepository.save(director);
+                                                    }).subscribeOn(Schedulers.boundedElastic()));
+                                        }
+                                        return Mono.just(director);
+                                    })
                             , 4)
                             .collectList());
 

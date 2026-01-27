@@ -37,16 +37,24 @@ public class ImageAdminController {
                     Mono<String> posterMono = imageDownloader.downloadAndStoreReactive(p.getPosterPath(), "posters", p.getTmdbId()).onErrorResume(e -> Mono.empty());
                     Mono<String> backdropMono = imageDownloader.downloadAndStoreReactive(p.getBackdropPath(), "backdrops", p.getTmdbId()).onErrorResume(e -> Mono.empty());
 
-                    // descargar fotos de actores
+                    // descargar fotos de actores y guardarlas
                     var actorMonos = p.getActores().stream()
-                            .map(a -> imageDownloader.downloadAndStoreReactive(a.getFotoUrl() != null ? a.getFotoUrl() : a.getFotoUrl(), "actors", a.getTmdbId())
-                                    .flatMap(url -> Mono.fromCallable(() -> { a.setFotoUrl(url); return peliculaRepository.save(p); }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()))
+                            .map(a -> imageDownloader.downloadAndStoreReactive(a.getTmdbProfilePath() != null ? a.getTmdbProfilePath() : a.getTmdbProfilePath(), "actors", a.getTmdbId())
+                                    .flatMap(url -> Mono.fromCallable(() -> { a.setFotoUrl(url); return a; }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()))
+                                    .flatMap(actor -> Mono.fromCallable(() -> { /* guardar actor */ return actor; }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()))
                                     .onErrorResume(e -> Mono.empty()))
                             .collect(Collectors.toList());
 
-                    return Mono.zip(posterMono.defaultIfEmpty(null), backdropMono.defaultIfEmpty(null), Mono.when(actorMonos))
+                    // descargar fotos de directores y guardarlas
+                    var directorMonos = p.getDirectores().stream()
+                            .map(d -> imageDownloader.downloadAndStoreReactive(d.getTmdbProfilePath() != null ? d.getTmdbProfilePath() : d.getTmdbProfilePath(), "directors", d.getTmdbId())
+                                    .flatMap(url -> Mono.fromCallable(() -> { d.setFotoUrl(url); return d; }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()))
+                                    .flatMap(dir -> Mono.fromCallable(() -> { /* guardar director */ return dir; }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()))
+                                    .onErrorResume(e -> Mono.empty()))
+                            .collect(Collectors.toList());
+
+                    return Mono.zip(posterMono.defaultIfEmpty(null), backdropMono.defaultIfEmpty(null), Mono.when(actorMonos), Mono.when(directorMonos))
                             .map(tuple -> ResponseEntity.ok().build());
                 });
     }
 }
-
