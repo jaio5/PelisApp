@@ -17,11 +17,10 @@ public class Categoria {
     @Column(name = "id", nullable = false)
     private Integer id;
 
-    @Column(name = "nombre", nullable = false, length = 100)
+    @Column(name = "nombre", nullable = false, length = 150)
     private String nombre;
 
-    @Lob
-    @Column(name = "descripcion")
+    @Column(name = "descripcion", columnDefinition = "text")
     private String descripcion;
 
     @ManyToMany(mappedBy = "categorias")

@@ -26,8 +26,7 @@ public class Pelicula {
 
     private Integer duracion;
 
-    @Lob
-    @Column(name = "sinopsis")
+    @Column(name = "sinopsis", columnDefinition = "text")
     private String sinopsis;
 
     @ManyToOne(fetch = FetchType.LAZY)

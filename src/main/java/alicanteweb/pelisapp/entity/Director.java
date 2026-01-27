@@ -31,8 +31,7 @@ public class Director {
     @JoinColumn(name = "pais_id")
     private Pais pais;
 
-    @Lob
-    @Column(name = "biografia")
+    @Column(name = "biografia", columnDefinition = "text")
     private String biografia;
 
     @Column(name = "tmdb_profile_path", length = 512)

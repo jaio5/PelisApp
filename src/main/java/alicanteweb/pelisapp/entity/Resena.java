@@ -37,8 +37,7 @@ public class Resena {
     @Column(name = "puntuacion", nullable = false)
     private Integer puntuacion;
 
-    @Lob
-    @Column(name = "comentario")
+    @Column(name = "comentario", columnDefinition = "text")
     private String comentario;
 
     @CreationTimestamp
