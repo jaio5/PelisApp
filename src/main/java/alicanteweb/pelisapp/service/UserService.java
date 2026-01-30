@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,12 +75,12 @@ public class UserService {
         // Example thresholds
         Optional<Role> criticRole = roleRepository.findByName("ROLE_CRITIC");
         if (avgLikesPerReview >= 3.0 && criticRole.isPresent()) {
-            user.getRoles().add(criticRole.get());
+            user.addRole(criticRole.get());
         }
 
         Optional<Role> topCritic = roleRepository.findByName("ROLE_TOP_CRITIC");
         if (avgLikesPerReview >= 5.0 && topCritic.isPresent()) {
-            user.getRoles().add(topCritic.get());
+            user.addRole(topCritic.get());
         }
 
         // Example badge for very liked users
@@ -101,10 +100,10 @@ public class UserService {
             return tagRepository.save(t);
         });
 
-        if (user.getTags() == null) user.setTags(new HashSet<>());
+        // Usa helper addTag en lugar de manipular la colección expuesta
         boolean present = user.getTags().stream().anyMatch(t -> t.getCode().equals(code));
         if (!present) {
-            user.getTags().add(tag);
+            user.addTag(tag);
         }
     }
 }

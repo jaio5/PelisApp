@@ -35,6 +35,9 @@ public class Movie {
 
     private String posterPath; // URL or local path
 
+    @Column(name = "poster_local_path")
+    private String posterLocalPath;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "movie_actor",
             joinColumns = @JoinColumn(name = "movie_id"),
