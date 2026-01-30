@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>PelisApp - Inicio</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}" />
+</head>
+<body>
+<header>
+    <h1>PelisApp</h1>
+    <nav>
+        <a th:href="@{/}">Inicio</a>
+        <a th:href="@{/peliculas}">Películas</a>
+    </nav>
+</header>
+<main>
+    <section>
+        <h2>Últimas películas</h2>
+        <div class="grid">
+            <div class="card" th:each="p : ${peliculas}">
+                <!-- Si posterPath está presente lo usamos, si no mostramos placeholder -->
+                <img th:if="${p.posterPath != null}" th:src="${p.posterPath}" alt="Poster"/>
+                <img th:unless="${p.posterPath != null}" th:src="@{/img/placeholder.png}" alt="Poster"/>
+
+                <h3 th:text="${p.titulo}">Título</h3>
+                <p th:text="${p.anio}">2020</p>
+                <a th:href="@{/pelicula/{id}(id=${p.id})}">Ver detalles</a>
+            </div>
+        </div>
+    </section>
+</main>
+<footer>
+    <p>© PelisApp</p>
+</footer>
+</body>
+</html>

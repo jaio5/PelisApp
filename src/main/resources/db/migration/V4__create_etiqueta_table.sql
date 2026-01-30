@@ -14,4 +14,3 @@ CREATE TABLE IF NOT EXISTS usuario_etiquetas (
     etiqueta_id integer NOT NULL,
     PRIMARY KEY (usuario_id, etiqueta_id)
 );
-

@@ -2,8 +2,7 @@ package alicanteweb.pelisapp.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import alicanteweb.pelisapp.entity.Actor;
-
+import alicanteweb.pelisapp.entity.User;
 @Repository
-public interface ActorRepository extends JpaRepository<Actor, Long> {
+public interface UserRepository extends JpaRepository<User,Long> {
 }

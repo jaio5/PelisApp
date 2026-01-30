@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${usuario.username} + ' - Perfil'">Perfil</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}" />
+</head>
+<body>
+<header>
+    <h1 th:text="${usuario.username}">usuario</h1>
+    <nav>
+        <a th:href="@{/}">Inicio</a>
+        <a th:href="@{/peliculas}">Películas</a>
+    </nav>
+</header>
+<main>
+    <section>
+        <h2>Perfil</h2>
+        <p><strong>Nivel crítico:</strong> <span th:text="${usuario.nivelCritico}">1</span></p>
+        <p><strong>Etiquetas:</strong>
+            <span th:each="et : ${usuario.etiquetas}" th:text="${et.nombre}">Etiqueta</span>
+        </p>
+    </section>
+
+    <section>
+        <h2>Reseñas</h2>
+        <ul>
+            <li th:each="r : ${resenas}">
+                <div><a th:href="@{/pelicula/{id}(id=${r.pelicula.id})}" th:text="${r.pelicula.titulo}">Pelicula</a></div>
+                <div th:text="${r.puntuacion}">5</div>
+                <div th:text="${r.comentario}">Comentario</div>
+            </li>
+        </ul>
+    </section>
+</main>
+<footer>
+    <p>© PelisApp</p>
+</footer>
+</body>
+</html>

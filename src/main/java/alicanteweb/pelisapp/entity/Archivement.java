@@ -5,18 +5,23 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Instant;
+
 @Entity
-@Table(name = "role", uniqueConstraints = {@UniqueConstraint(columnNames = {"name"})})
+@Table(name = "archivement")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Role {
+public class Archivement {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String name; // e.g., ROLE_USER, ROLE_ADMIN, ROLE_CRITIC
+    private String code;
 
+    private String name;
     private String description;
+    private String iconUrl;
+    private Instant createdAt;
 }

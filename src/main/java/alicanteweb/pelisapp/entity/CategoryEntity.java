@@ -6,17 +6,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "role", uniqueConstraints = {@UniqueConstraint(columnNames = {"name"})})
+@Table(name = "category")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Role {
+public class CategoryEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String name; // e.g., ROLE_USER, ROLE_ADMIN, ROLE_CRITIC
-
-    private String description;
+    private String name;
 }

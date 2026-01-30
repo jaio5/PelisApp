@@ -2,45 +2,30 @@ package alicanteweb.pelisapp.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.Set;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "director")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Director {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
-    private Integer id;
+    private Long id;
 
-    @Column(name = "tmdb_id", unique = true)
-    private Integer tmdbId;
+    @Column(unique = true)
+    private Long tmdbId;
 
-    @Column(name = "nombre", nullable = false, length = 150)
-    private String nombre;
+    @Column(nullable = false)
+    private String name;
 
-    @Column(name = "fecha_nacimiento")
-    private LocalDate fechaNacimiento;
+    private String profilePath;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pais_id")
-    private Pais pais;
-
-    @Column(name = "biografia", columnDefinition = "text")
-    private String biografia;
-
-    @Column(name = "tmdb_profile_path", length = 512)
-    private String tmdbProfilePath;
-
-    @Column(name = "foto_url")
-    private String fotoUrl;
-
-    @ManyToMany(mappedBy = "directores")
-    private Set<Pelicula> peliculas = new LinkedHashSet<>();
-
+    @ManyToMany(mappedBy = "directors", fetch = FetchType.LAZY)
+    private Set<Movie> movies = new HashSet<>();
 }

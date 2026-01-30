@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${pelicula.titulo}">Pelicula</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}" />
+    <script th:src="@{/js/app.js}" defer></script>
+</head>
+<body>
+<header>
+    <h1 th:text="${pelicula.titulo}">Título</h1>
+    <nav>
+        <a th:href="@{/}">Inicio</a>
+        <a th:href="@{/peliculas}">Películas</a>
+    </nav>
+</header>
+<main>
+    <section class="movie-detail">
+        <div class="poster">
+            <img th:if="${pelicula.posterPath != null}" th:src="${pelicula.posterPath}" alt="Poster"/>
+            <img th:unless="${pelicula.posterPath != null}" th:src="@{/img/placeholder.png}" alt="Poster"/>
+        </div>
+        <div class="info">
+            <p><strong>Año:</strong> <span th:text="${pelicula.anio}">2020</span></p>
+            <p><strong>Sinopsis:</strong> <span th:text="${pelicula.sinopsis}">Sinopsis</span></p>
+            <p><strong>Valoración media:</strong> <span th:text="${#numbers.formatDecimal(avg, 1, 'POINT')}">0.0</span></p>
+        </div>
+    </section>
+
+    <section class="resenas">
+        <h2>Reseñas</h2>
+        <div th:if="${resenas != null and #lists.isEmpty(resenas)}">
+            <p>No hay reseñas aún. Sé el primero en escribir una.</p>
+        </div>
+        <ul>
+            <li th:each="r : ${resenas}">
+                <div class="resena-author" th:text="${r.usuario.username}">usuario</div>
+                <div class="resena-score">Puntuación: <span th:text="${r.puntuacion}">5</span>/5</div>
+                <div class="resena-text" th:text="${r.comentario}">Comentario</div>
+                <div class="resena-date" th:text="${r.fecha}">Fecha</div>
+            </li>
+        </ul>
+
+        <div class="resena-form">
+            <h3>Escribe una reseña</h3>
+            <form id="resenaForm" th:action="@{/api/peliculas/{id}/resenas(id=${pelicula.id})}" method="post">
+                <label for="puntuacion">Puntuación</label>
+                <select id="puntuacion" name="puntuacion">
+                    <option th:each="i : ${#numbers.sequence(1,5)}" th:value="${i}" th:text="${i}">5</option>
+                </select>
+                <label for="comentario">Comentario</label>
+                <textarea id="comentario" name="comentario" rows="4"></textarea>
+                <button type="submit">Enviar</button>
+            </form>
+            <div id="resenaMessage" style="display:none"></div>
+        </div>
+    </section>
+</main>
+<footer>
+    <p>© PelisApp</p>
+</footer>
+</body>
+</html>
