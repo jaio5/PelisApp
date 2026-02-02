@@ -13,9 +13,13 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 public class AdminTMDBController {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminTMDBController.class);
 
     private final TMDBClient tmdbClient;
     private final MovieRepository movieRepository;
@@ -66,6 +70,7 @@ public class AdminTMDBController {
                 // try to save
                 movieRepository.save(m);
                 saved++;
+                log.info("Admin saved movie tmdbId={} dbId={} title='{}' posterLocalPath={}", tmdbId, m.getId(), m.getTitle(), m.getPosterLocalPath());
             }
         }
 

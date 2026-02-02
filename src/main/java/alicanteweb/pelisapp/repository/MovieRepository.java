@@ -11,6 +11,7 @@ import java.util.Optional;
 @Repository
 public interface MovieRepository extends JpaRepository<Movie,Long> {
     Optional<Movie> findByTmdbId(Long tmdbId);
+    Optional<Movie> findByTitle(String title);
     Page<Movie> findAll(Pageable pageable);
     Page<Movie> findByCategories_Name(String name, Pageable pageable);
 }

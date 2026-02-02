@@ -58,4 +58,10 @@ public class Movie {
 
     @OneToMany(mappedBy = "movie", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<Review> reviews = new HashSet<>();
+
+    // Getter transitorio para exponer el año en las plantillas (ej: ${m.year})
+    @Transient
+    public Integer getYear() {
+        return (this.releaseDate != null) ? this.releaseDate.getYear() : null;
+    }
 }

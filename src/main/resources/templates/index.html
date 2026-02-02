@@ -1,36 +1,360 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
-    <meta charset="UTF-8" />
-    <title>PelisApp - Inicio</title>
-    <link rel="stylesheet" th:href="@{/css/styles.css}" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PelisApp - Red Social de Películas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <style>
+        :root {
+            --primary-color: #1e1e1e;
+            --secondary-color: #2c2c2c;
+            --accent-color: #ff6b35;
+            --text-color: #ffffff;
+            --muted-color: #b3b3b3;
+        }
+
+        body {
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            font-family: 'Arial', sans-serif;
+        }
+
+        .navbar {
+            background-color: var(--secondary-color) !important;
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .navbar-brand {
+            color: var(--accent-color) !important;
+            font-weight: bold;
+            font-size: 1.8rem;
+        }
+
+        .movie-card {
+            background-color: var(--secondary-color);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid #444;
+            margin-bottom: 2rem;
+        }
+
+        .movie-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(255, 107, 53, 0.3);
+        }
+
+        .movie-poster {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            background-color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .movie-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .placeholder-poster {
+            background: linear-gradient(135deg, #555, #333);
+            color: var(--muted-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+
+        .movie-info {
+            padding: 1rem;
+        }
+
+        .movie-title {
+            color: var(--text-color);
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            text-decoration: none;
+            display: block;
+        }
+
+        .movie-title:hover {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .movie-year {
+            color: var(--muted-color);
+            font-size: 0.9rem;
+        }
+
+        .genre-filter {
+            background-color: var(--secondary-color);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .btn-primary:hover {
+            background-color: #e55a30;
+            border-color: #e55a30;
+        }
+
+        .pagination .page-link {
+            background-color: var(--secondary-color);
+            border-color: #444;
+            color: var(--text-color);
+        }
+
+        .pagination .page-link:hover {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+        }
+
+        .pagination .active .page-link {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, var(--accent-color), #e55a30);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .hero-section {
+            background: linear-gradient(rgba(30, 30, 30, 0.8), rgba(30, 30, 30, 0.8)), url('https://images.unsplash.com/photo-1489599511976-7b1259c2767b?w=1200') center/cover;
+            padding: 4rem 0;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .hero-title {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--muted-color);
+            margin-bottom: 2rem;
+        }
+    </style>
 </head>
 <body>
-<header>
-    <h1>PelisApp</h1>
-    <nav>
-        <a th:href="@{/}">Inicio</a>
-        <a th:href="@{/peliculas}">Películas</a>
-    </nav>
-</header>
-<main>
-    <section>
-        <h2>Últimas películas</h2>
-        <div class="grid">
-            <div class="card" th:each="p : ${peliculas}">
-                <!-- Si posterPath está presente lo usamos, si no mostramos placeholder -->
-                <img th:if="${p.posterPath != null}" th:src="${p.posterPath}" alt="Poster"/>
-                <img th:unless="${p.posterPath != null}" th:src="@{/img/placeholder.png}" alt="Poster"/>
-
-                <h3 th:text="${p.titulo}">Título</h3>
-                <p th:text="${p.anio}">2020</p>
-                <a th:href="@{/pelicula/{id}(id=${p.id})}">Ver detalles</a>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-film me-2"></i>PelisApp
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" th:href="@{/}">
+                            <i class="fas fa-home me-1"></i>Inicio
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/admin/movies}">
+                            <i class="fas fa-cogs me-1"></i>Admin
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item" th:if="${#authentication != null and #authentication.authenticated}">
+                        <a class="nav-link" th:href="@{/perfil}">
+                            <i class="fas fa-user me-1"></i>Mi Perfil
+                        </a>
+                    </li>
+                    <li class="nav-item" th:if="${#authentication == null or !#authentication.authenticated}">
+                        <a class="nav-link" th:href="@{/login}">
+                            <i class="fas fa-sign-in-alt me-1"></i>Iniciar Sesión
+                        </a>
+                    </li>
+                    <li class="nav-item" th:if="${#authentication == null or !#authentication.authenticated}">
+                        <a class="nav-link" th:href="@{/register}">
+                            <i class="fas fa-user-plus me-1"></i>Registrarse
+                        </a>
+                    </li>
+                    <li class="nav-item" th:if="${#authentication != null and #authentication.authenticated}">
+                        <form th:action="@{/logout}" method="post" style="display: inline;">
+                            <button type="submit" class="btn nav-link" style="border: none; background: none; color: inherit;">
+                                <i class="fas fa-sign-out-alt me-1"></i>Cerrar Sesión
+                            </button>
+                        </form>
+                    </li>
+                </ul>
             </div>
         </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <h1 class="hero-title">Descubre y Comparte</h1>
+            <p class="hero-subtitle">La red social definitiva para amantes del cine</p>
+            <a th:href="@{/login}" class="btn btn-primary btn-lg">
+                <i class="fas fa-star me-2"></i>Únete Ahora
+            </a>
+        </div>
     </section>
-</main>
-<footer>
-    <p>© PelisApp</p>
-</footer>
+
+    <div class="container">
+        <div class="row">
+            <!-- Sidebar con filtros -->
+            <div class="col-md-3">
+                <div class="genre-filter">
+                    <h5><i class="fas fa-filter me-2"></i>Filtrar por Género</h5>
+                    <div class="d-grid gap-2">
+                        <a th:href="@{/}" class="btn btn-outline-light btn-sm"
+                           th:classappend="${selectedGenre == null ? ' active' : ''}">
+                            Todas las Películas
+                        </a>
+                        <a th:each="cat : ${categories}"
+                           th:href="@{/(genre=${cat.name})}"
+                           th:text="${cat.name}"
+                           th:classappend="${selectedGenre != null && selectedGenre == cat.name ? ' active' : ''}"
+                           class="btn btn-outline-light btn-sm">
+                            Género
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Stats Card -->
+                <div class="stats-card">
+                    <h6><i class="fas fa-chart-bar me-2"></i>Estadísticas</h6>
+                    <p class="mb-1">Total Películas: <span th:text="${moviesPage?.totalElements ?: 0}">0</span></p>
+                    <p class="mb-0">Página: <span th:text="${(moviesPage?.number ?: 0) + 1}">1</span> de <span th:text="${moviesPage?.totalPages ?: 1}">1</span></p>
+                </div>
+            </div>
+
+            <!-- Contenido Principal -->
+            <div class="col-md-9">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>
+                        <i class="fas fa-film me-2 text-warning"></i>
+                        <span th:if="${selectedGenre != null}" th:text="'Películas de ' + ${selectedGenre}">Películas Filtradas</span>
+                        <span th:unless="${selectedGenre != null}">Catálogo de Películas</span>
+                    </h2>
+                    <small class="text-muted" th:if="${moviesPage != null}">
+                        Mostrando <span th:text="${moviesPage.numberOfElements}">0</span> de <span th:text="${moviesPage.totalElements}">0</span> películas
+                    </small>
+                </div>
+
+                <!-- Grid de Películas -->
+                <div class="row" th:if="${movies != null && !#lists.isEmpty(movies)}">
+                    <div class="col-md-4 col-sm-6" th:each="movie : ${movies}">
+                        <div class="movie-card">
+                            <!-- Poster de la película -->
+                            <div class="movie-poster">
+                                <!-- Imagen local si existe -->
+                                <img th:if="${movie.posterLocalPath != null && !movie.posterLocalPath.isEmpty()}"
+                                     th:src="@{'/images/' + ${movie.posterLocalPath}}"
+                                     th:alt="${movie.title}"
+                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'placeholder-poster\'><i class=\'fas fa-film\'></i></div>';">
+
+                                <!-- Imagen de TMDB si no hay local -->
+                                <img th:unless="${movie.posterLocalPath != null && !movie.posterLocalPath.isEmpty()}"
+                                     th:if="${movie.posterPath != null && !movie.posterPath.isEmpty()}"
+                                     th:src="${movie.posterPath.startsWith('http') ? movie.posterPath : 'https://image.tmdb.org/t/p/w500' + movie.posterPath}"
+                                     th:alt="${movie.title}"
+                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'placeholder-poster\'><i class=\'fas fa-film\'></i></div>';">
+
+                                <!-- Placeholder si no hay imagen -->
+                                <div th:if="${(movie.posterLocalPath == null || movie.posterLocalPath.isEmpty()) && (movie.posterPath == null || movie.posterPath.isEmpty())}"
+                                     class="placeholder-poster">
+                                    <i class="fas fa-film"></i>
+                                </div>
+                            </div>
+
+                            <!-- Información de la película -->
+                            <div class="movie-info">
+                                <a th:href="@{/pelicula/{id}(id=${movie.id})}" class="movie-title">
+                                    <span th:text="${movie.title ?: 'Título Desconocido'}">Título</span>
+                                </a>
+                                <div class="movie-year">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    <span th:text="${movie.releaseDate != null ? #temporals.year(movie.releaseDate) : 'Año desconocido'}">Año</span>
+                                </div>
+                                <div class="mt-2">
+                                    <span th:each="category, iterStat : ${movie.categories}" class="badge bg-secondary me-1">
+                                        <span th:text="${category.name}">Género</span>
+                                    </span>
+                                </div>
+                                <div class="mt-2">
+                                    <a th:href="@{/pelicula/{id}(id=${movie.id})}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>Ver Detalles
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mensaje si no hay películas -->
+                <div th:if="${movies == null || #lists.isEmpty(movies)}" class="text-center py-5">
+                    <i class="fas fa-film fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No hay películas disponibles</h4>
+                    <p class="text-muted">Intenta cambiar los filtros o vuelve más tarde.</p>
+                </div>
+
+                <!-- Paginación -->
+                <nav th:if="${moviesPage != null && moviesPage.totalPages > 1}" aria-label="Paginación de películas">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item" th:classappend="${!moviesPage.hasPrevious()} ? 'disabled'">
+                            <a class="page-link" th:href="@{/(page=${moviesPage.number - 1}, genre=${selectedGenre})}" tabindex="-1">
+                                <i class="fas fa-chevron-left"></i> Anterior
+                            </a>
+                        </li>
+
+                        <li class="page-item" th:each="pageNum : ${pageNumbers}"
+                            th:classappend="${pageNum == moviesPage.number} ? 'active'">
+                            <a class="page-link" th:href="@{/(page=${pageNum}, genre=${selectedGenre})}" th:text="${pageNum + 1}">1</a>
+                        </li>
+
+                        <li class="page-item" th:classappend="${!moviesPage.hasNext()} ? 'disabled'">
+                            <a class="page-link" th:href="@{/(page=${moviesPage.number + 1}, genre=${selectedGenre})}">
+                                Siguiente <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 mt-5" style="background-color: var(--secondary-color); border-top: 1px solid #444;">
+        <div class="container">
+            <p class="mb-0 text-muted">
+                © 2026 PelisApp - Red Social de Películas |
+                <i class="fas fa-heart text-danger"></i>
+                Hecho con pasión por el cine
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

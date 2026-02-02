@@ -5,7 +5,7 @@ import alicanteweb.pelisapp.service.MovieService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/movies")
+@RequestMapping("/movies")
 public class MovieController {
 
     private final MovieService movieService;

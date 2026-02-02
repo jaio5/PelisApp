@@ -10,7 +10,6 @@ import alicanteweb.pelisapp.entity.Movie;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +30,7 @@ public class TMDBDataLoader implements CommandLineRunner {
 
     @Override
     @Transactional
-    public void run(@Nullable String... args) {
+    public void run(String... args) {
         log.info("TMDBDataLoader starting (load-on-startup=true)");
         int pagesToLoad = 2; // ajustar
         int saved = 0;
@@ -82,6 +81,9 @@ public class TMDBDataLoader implements CommandLineRunner {
 
                     movieRepository.save(m);
                     saved++;
+
+                    // Nuevo log para depuración: confirmar que se ha guardado y qué posterLocalPath tiene (si se ha descargado)
+                    log.info("Saved movie tmdbId={} dbId={} title='{}' posterLocalPath={}", tmdbId, m.getId(), m.getTitle(), m.getPosterLocalPath());
                 } catch (Exception e) {
                     log.error("Failed to save movie tmdbId={} due to {}", tmdbId, e.toString());
                 }

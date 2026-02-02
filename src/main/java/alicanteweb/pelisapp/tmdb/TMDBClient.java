@@ -1,45 +1,234 @@
 package alicanteweb.pelisapp.tmdb;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
+import java.time.Duration;
 
 @Service
 public class TMDBClient {
+    private static final Logger log = LoggerFactory.getLogger(TMDBClient.class);
 
     private final WebClient webClient;
 
-    @Value("${app.tmdb.api-key}")
+    @Value("${app.tmdb.api-key:}")
     private String apiKey;
+
+    @Value("${app.tmdb.bearer-token:}")
+    private String bearerToken;
+
+    // cached configuration
+    private volatile String imagesBaseUrl;
+    private volatile String posterSize; // e.g. w500
 
     public TMDBClient(WebClient tmdbWebClient) {
         this.webClient = tmdbWebClient;
     }
 
+    private synchronized void ensureConfigurationLoaded() {
+        if (imagesBaseUrl != null && posterSize != null) return;
+        log.debug("Loading TMDB configuration (ensureConfigurationLoaded)");
+        try {
+            JsonNode cfg = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/configuration").build())
+                    .headers(h -> {
+                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
+                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                    })
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block(Duration.ofSeconds(10));
+            if (cfg != null && cfg.has("images")) {
+                JsonNode images = cfg.path("images");
+                imagesBaseUrl = images.path("secure_base_url").asText(images.path("base_url").asText("https://image.tmdb.org/t/p"));
+                // pick poster size prefer w500
+                posterSize = "w500";
+                if (images.has("poster_sizes")) {
+                    for (JsonNode s : images.path("poster_sizes")) {
+                        String st = s.asText();
+                        if ("w500".equals(st)) { posterSize = "w500"; break; }
+                    }
+                    if (posterSize == null) posterSize = images.path("poster_sizes").get(0).asText("w500");
+                }
+                log.debug("TMDB configuration loaded: imagesBaseUrl={}, posterSize={}", imagesBaseUrl, posterSize);
+            } else {
+                log.debug("TMDB configuration endpoint returned null or missing 'images'");
+            }
+        } catch (WebClientResponseException we) {
+            log.warn("TMDB configuration failed: status={} body={}", we.getStatusCode().value(), we.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.warn("TMDB configuration failed: {}", e.getMessage());
+        }
+        if (imagesBaseUrl == null) imagesBaseUrl = "https://image.tmdb.org/t/p";
+        if (posterSize == null) posterSize = "w500";
+    }
+
     public JsonNode getPopular(int page) {
-        return webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/movie/popular")
-                        .queryParam("page", page)
-                        .queryParam("language", "es-ES")
-                        .queryParam("api_key", apiKey)
-                        .build())
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .block();
+        log.debug("Requesting TMDB popular page={} using {}", page, (bearerToken != null && !bearerToken.isBlank()) ? "Bearer token" : (apiKey != null && !apiKey.isBlank() ? "API key" : "no auth"));
+        try {
+            JsonNode resp = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/movie/popular")
+                            .queryParam("page", page)
+                            .queryParam("language", "es-ES")
+                            .build())
+                    .headers(h -> {
+                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
+                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                    })
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block(Duration.ofSeconds(10));
+            if (resp != null && resp.has("results") && resp.path("results").isArray()) {
+                int count = resp.path("results").size();
+                log.debug("TMDB popular page={} returned {} results", page, count);
+            } else {
+                log.debug("TMDB popular page={} returned null or no results array", page);
+            }
+            return resp;
+        } catch (WebClientResponseException we) {
+            log.warn("TMDB getPopular failed: status={} body={}", we.getStatusCode().value(), we.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.warn("TMDB getPopular failed: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Obtiene películas trending desde TMDB
+     */
+    public JsonNode getTrending(String mediaType, String timeWindow) {
+        log.debug("Getting TMDB trending {} for {}", mediaType, timeWindow);
+        try {
+            JsonNode resp = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/trending/{media_type}/{time_window}")
+                            .build(mediaType, timeWindow))
+                    .headers(h -> {
+                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
+                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                    })
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block(Duration.ofSeconds(10));
+
+            log.debug("TMDB trending {} results: {} items", mediaType,
+                    resp != null ? resp.path("results").size() : 0);
+            return resp;
+        } catch (WebClientResponseException we) {
+            log.warn("TMDB getTrending failed: status={} body={}", we.getStatusCode().value(), we.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.warn("TMDB getTrending failed: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Obtiene películas top rated desde TMDB
+     */
+    public JsonNode getTopRated(int page) {
+        log.debug("Getting TMDB top rated movies page {}", page);
+        try {
+            JsonNode resp = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/movie/top_rated")
+                            .queryParam("page", page)
+                            .queryParam("language", "es-ES")
+                            .build())
+                    .headers(h -> {
+                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
+                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                    })
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block(Duration.ofSeconds(10));
+
+            log.debug("TMDB top rated page {} results: {} movies",
+                    page, resp != null ? resp.path("results").size() : 0);
+            return resp;
+        } catch (WebClientResponseException we) {
+            log.warn("TMDB getTopRated failed: status={} body={}", we.getStatusCode().value(), we.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.warn("TMDB getTopRated failed: {}", e.getMessage());
+        }
+        return null;
     }
 
     public JsonNode getMovieDetails(long tmdbId) {
-        return webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/movie/{id}")
-                        .queryParam("language", "es-ES")
-                        .queryParam("append_to_response", "credits")
-                        .queryParam("api_key", apiKey)
-                        .build(tmdbId))
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .block();
+        log.debug("Requesting TMDB movie details for tmdbId={} using {}", tmdbId, (bearerToken != null && !bearerToken.isBlank()) ? "Bearer token" : (apiKey != null && !apiKey.isBlank() ? "API key" : "no auth"));
+        try {
+            JsonNode resp = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/movie/{id}")
+                            .queryParam("language", "es-ES")
+                            .queryParam("append_to_response", "credits")
+                            .build(tmdbId))
+                    .headers(h -> {
+                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
+                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                    })
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block(Duration.ofSeconds(10));
+            if (resp == null) {
+                log.debug("TMDB movie details for tmdbId={} returned null", tmdbId);
+            } else {
+                log.debug("TMDB movie details for tmdbId={} received", tmdbId);
+            }
+            return resp;
+        } catch (WebClientResponseException we) {
+            log.warn("TMDB getMovieDetails failed: status={} body={}", we.getStatusCode().value(), we.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.warn("TMDB getMovieDetails failed: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /** Devuelve la URL completa del poster con el tamaño elegido (cached) */
+    public String buildImageUrl(String posterPath) {
+        if (posterPath == null || posterPath.isBlank()) return null;
+        ensureConfigurationLoaded();
+        String clean = posterPath.startsWith("/") ? posterPath : ("/" + posterPath);
+        String base = (imagesBaseUrl != null && !imagesBaseUrl.isBlank()) ? imagesBaseUrl : "https://image.tmdb.org/t/p";
+        String size = (posterSize != null && !posterSize.isBlank()) ? posterSize : "w500";
+        String full = base + "/" + size + clean;
+        log.debug("buildImageUrl posterPath={} -> {}", posterPath, full);
+        return full;
+    }
+
+    /**
+     * Busca películas por título en TMDB.
+     */
+    public JsonNode searchMovie(String query) {
+        log.debug("Searching TMDB for movie: {}", query);
+        try {
+            JsonNode resp = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/search/movie")
+                            .queryParam("query", query)
+                            .queryParam("language", "es-ES")
+                            .build())
+                    .headers(h -> {
+                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
+                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                    })
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block(Duration.ofSeconds(10));
+
+            log.debug("TMDB search results for '{}': {} movies found",
+                    query, resp != null ? resp.path("total_results").asInt() : 0);
+            return resp;
+        } catch (WebClientResponseException we) {
+            log.warn("TMDB searchMovie failed: status={} body={}", we.getStatusCode().value(), we.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.warn("TMDB searchMovie failed: {}", e.getMessage());
+        }
+        return null;
     }
 }

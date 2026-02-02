@@ -11,9 +11,19 @@ public class LoginController {
     @GetMapping("/login")
     public String login(@RequestParam(value = "error", required = false) String error,
                         @RequestParam(value = "logout", required = false) String logout,
+                        @RequestParam(value = "confirmed", required = false) String confirmed,
                         Model model) {
-        if (error != null) model.addAttribute("error", true);
-        if (logout != null) model.addAttribute("logout", true);
+
+        if (error != null) {
+            model.addAttribute("error", true);
+        }
+        if (logout != null) {
+            model.addAttribute("logout", true);
+        }
+        if (confirmed != null) {
+            model.addAttribute("confirmed", true);
+        }
+
         return "login";
     }
 

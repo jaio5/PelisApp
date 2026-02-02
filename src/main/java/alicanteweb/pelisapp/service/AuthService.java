@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Optional;
 
 @Service
 public class AuthService {
@@ -93,6 +94,84 @@ public class AuthService {
         String refresh = jwtTokenProvider.createRefreshToken(username);
         long expires = jwtTokenProvider.getExpiryMillis(access);
         return new LoginResponse(access, expires, refresh);
+    }
+
+    /**
+     * Registro web con confirmación de email
+     */
+    @Transactional
+    public User registerWebUser(User user) {
+        // Verificar si el usuario ya existe
+        if (userRepository.existsByUsername(user.getUsername())) {
+            throw new IllegalArgumentException("El usuario ya existe");
+        }
+        if (userRepository.existsByEmail(user.getEmail())) {
+            throw new IllegalArgumentException("El email ya está en uso");
+        }
+
+        // Encriptar contraseña
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setRegisteredAt(java.time.Instant.now());
+        user.setEmailConfirmed(false); // Por defecto no confirmado
+
+        // Asignar rol USER por defecto
+        Role defaultRole = roleRepository.findByName("USER").orElseGet(() -> {
+            Role r = new Role();
+            r.setName("USER");
+            r.setDescription("Usuario estándar");
+            return roleRepository.save(r);
+        });
+
+        Set<Role> roles = new HashSet<>();
+        roles.add(defaultRole);
+        user.setRoles(roles);
+
+        return userRepository.save(user);
+    }
+
+    /**
+     * Generar token de confirmación
+     */
+    public String generateConfirmationToken(Long userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        // Crear token JWT con expiración de 24 horas
+        return jwtTokenProvider.createConfirmationToken(user.getUsername(), 24 * 60 * 60 * 1000L);
+    }
+
+    /**
+     * Confirmar cuenta con token
+     */
+    @Transactional
+    public boolean confirmAccount(String token) {
+        try {
+            if (!jwtTokenProvider.validateToken(token)) {
+                return false;
+            }
+
+            String username = jwtTokenProvider.getUsername(token);
+            Optional<User> userOpt = userRepository.findByUsername(username);
+
+            if (userOpt.isEmpty()) {
+                return false;
+            }
+
+            User user = userOpt.get();
+            user.setEmailConfirmed(true);
+            userRepository.save(user);
+
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Buscar usuario por email
+     */
+    public User findUserByEmail(String email) {
+        return userRepository.findByEmail(email).orElse(null);
     }
 
 }

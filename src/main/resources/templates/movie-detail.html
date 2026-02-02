@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${movie.title + ' - PelisApp'}">Película - PelisApp</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <style>
+        :root {
+            --primary-color: #1e1e1e;
+            --secondary-color: #2c2c2c;
+            --accent-color: #ff6b35;
+            --text-color: #ffffff;
+            --muted-color: #b3b3b3;
+        }
+
+        body {
+            background-color: var(--primary-color);
+            color: var(--text-color);
+        }
+
+        .movie-header {
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .movie-poster {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .movie-info h1 {
+            color: var(--accent-color);
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .movie-meta {
+            color: var(--muted-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .genre-badge {
+            background: linear-gradient(135deg, var(--accent-color), #e55a30);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        .rating-section {
+            background: var(--secondary-color);
+            border-radius: 10px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 107, 53, 0.3);
+        }
+
+        .average-rating {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .rating-number {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .rating-stars {
+            font-size: 1.5rem;
+            color: #ffc107;
+            margin: 0.5rem 0;
+        }
+
+        .star-distribution {
+            margin: 1rem 0;
+        }
+
+        .star-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .star-label {
+            min-width: 80px;
+            font-size: 0.9rem;
+        }
+
+        .progress {
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            margin: 0 1rem;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, var(--accent-color), #ffc107);
+        }
+
+        .review-form {
+            background: var(--secondary-color);
+            border-radius: 10px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 107, 53, 0.3);
+        }
+
+        .star-rating {
+            display: flex;
+            gap: 0.25rem;
+            margin: 1rem 0;
+        }
+
+        .star-rating input {
+            display: none;
+        }
+
+        .star-rating label {
+            cursor: pointer;
+            font-size: 2rem;
+            color: #666;
+            transition: color 0.2s;
+        }
+
+        .star-rating label:hover,
+        .star-rating input:checked ~ label,
+        .star-rating label:hover ~ label {
+            color: #ffc107;
+        }
+
+        .review-card {
+            background: var(--secondary-color);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .review-card:hover {
+            border-color: rgba(255, 107, 53, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .review-author {
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .review-rating {
+            color: #ffc107;
+        }
+
+        .review-text {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .review-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .like-button {
+            background: none;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+        }
+
+        .like-button:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .like-button.liked {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .review-date {
+            color: var(--muted-color);
+            font-size: 0.875rem;
+        }
+
+        .back-link {
+            color: var(--accent-color);
+            text-decoration: none;
+            margin-bottom: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .back-link:hover {
+            color: #e55a30;
+        }
+
+        @media (max-width: 768px) {
+            .movie-info h1 {
+                font-size: 2rem;
+            }
+
+            .rating-number {
+                font-size: 2rem;
+            }
+
+            .star-rating label {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--secondary-color); border-bottom: 2px solid var(--accent-color);">
+        <div class="container">
+            <a class="navbar-brand" href="/" style="color: var(--accent-color); font-weight: bold; font-size: 1.8rem;">
+                <i class="fas fa-film me-2"></i>PelisApp
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" th:href="@{/}">
+                    <i class="fas fa-home me-1"></i>Inicio
+                </a>
+                <a class="nav-link" th:href="@{/login}" sec:authorize="!isAuthenticated()">
+                    <i class="fas fa-sign-in-alt me-1"></i>Login
+                </a>
+                <a class="nav-link" th:href="@{/perfil}" sec:authorize="isAuthenticated()">
+                    <i class="fas fa-user me-1"></i>Mi Perfil
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Link para volver -->
+        <a href="javascript:history.back()" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Volver al catálogo
+        </a>
+
+        <!-- Mostrar mensajes -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <span th:text="${success}">Mensaje de éxito</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span th:text="${error}">Mensaje de error</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Cabecera de la película -->
+        <div class="movie-header">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <!-- Poster de la película -->
+                        <img th:if="${movie.posterLocalPath != null && !movie.posterLocalPath.isEmpty()}"
+                             th:src="@{'/images/' + ${movie.posterLocalPath}}"
+                             th:alt="${movie.title}"
+                             class="movie-poster">
+
+                        <img th:unless="${movie.posterLocalPath != null && !movie.posterLocalPath.isEmpty()}"
+                             th:if="${movie.posterPath != null && !movie.posterPath.isEmpty()}"
+                             th:src="${movie.posterPath.startsWith('http') ? movie.posterPath : 'https://image.tmdb.org/t/p/w500' + movie.posterPath}"
+                             th:alt="${movie.title}"
+                             class="movie-poster">
+
+                        <div th:if="${(movie.posterLocalPath == null || movie.posterLocalPath.isEmpty()) && (movie.posterPath == null || movie.posterPath.isEmpty())}"
+                             class="movie-poster d-flex align-items-center justify-content-center bg-dark text-muted"
+                             style="height: 400px; width: 300px;">
+                            <i class="fas fa-film fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="movie-info">
+                        <h1 th:text="${movie.title}">Título de la Película</h1>
+
+                        <div class="movie-meta">
+                            <p th:if="${movie.releaseDate != null}">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                <strong>Año:</strong> <span th:text="${#temporals.year(movie.releaseDate)}">2023</span>
+                            </p>
+                            <p th:if="${movie.runtimeMinutes != null && movie.runtimeMinutes > 0}">
+                                <i class="fas fa-clock me-2"></i>
+                                <strong>Duración:</strong> <span th:text="${movie.runtimeMinutes + ' minutos'}">120 minutos</span>
+                            </p>
+                        </div>
+
+                        <!-- Géneros -->
+                        <div class="mb-3">
+                            <span th:each="category : ${movie.categories}" class="genre-badge">
+                                <span th:text="${category.name}">Género</span>
+                            </span>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="movie-description">
+                            <h4>Sinopsis</h4>
+                            <p th:text="${movie.description ?: 'No hay descripción disponible.'}" class="lead">
+                                Descripción de la película...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-4">
+                <!-- Sección de Valoración Promedio -->
+                <div class="rating-section">
+                    <h3><i class="fas fa-star me-2"></i>Valoración de Usuarios</h3>
+
+                    <div class="average-rating" th:if="${movieStats.totalReviews > 0}">
+                        <div class="rating-number" th:text="${movieStats.averageRatingFormatted}">4.5</div>
+                        <div class="rating-stars">
+                            <span th:each="i : ${#numbers.sequence(1, 5)}"
+                                  th:class="${i <= movieStats.averageRating ? 'fas fa-star' : (i - 0.5 <= movieStats.averageRating ? 'fas fa-star-half-alt' : 'far fa-star')}"></span>
+                        </div>
+                        <div class="text-muted">
+                            <span th:text="${movieStats.totalReviews}">150</span> valoraciones
+                        </div>
+                    </div>
+
+                    <div class="average-rating" th:unless="${movieStats.totalReviews > 0}">
+                        <div class="rating-number">-</div>
+                        <div class="text-muted">Sin valoraciones aún</div>
+                    </div>
+
+                    <!-- Distribución de estrellas -->
+                    <div class="star-distribution" th:if="${movieStats.totalReviews > 0}">
+                        <h5>Distribución de Valoraciones</h5>
+                        <div th:each="star : ${#numbers.sequence(5, 1, -1)}" class="star-bar">
+                            <span class="star-label">
+                                <span th:text="${star}">5</span>
+                                <i class="fas fa-star text-warning"></i>
+                            </span>
+                            <div class="progress flex-grow-1">
+                                <div class="progress-bar"
+                                     th:style="'width: ' + ${movieStats.getStarPercentage(star)} + '%'"></div>
+                            </div>
+                            <small class="text-muted ms-2" th:text="${movieStats.starDistribution[star - 1]}">10</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <!-- Formulario para añadir reseña -->
+                <div class="review-form" th:if="${canReview}">
+                    <h4><i class="fas fa-pen me-2"></i>Escribe tu Reseña</h4>
+                    <form th:action="@{'/pelicula/' + ${movie.id} + '/review'}" method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Tu valoración:</label>
+                            <div class="star-rating" id="starRating">
+                                <input type="radio" name="stars" value="1" id="star1" required>
+                                <label for="star1" class="fas fa-star"></label>
+                                <input type="radio" name="stars" value="2" id="star2">
+                                <label for="star2" class="fas fa-star"></label>
+                                <input type="radio" name="stars" value="3" id="star3">
+                                <label for="star3" class="fas fa-star"></label>
+                                <input type="radio" name="stars" value="4" id="star4">
+                                <label for="star4" class="fas fa-star"></label>
+                                <input type="radio" name="stars" value="5" id="star5">
+                                <label for="star5" class="fas fa-star"></label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="reviewText" class="form-label">Tu comentario:</label>
+                            <textarea class="form-control" id="reviewText" name="text" rows="4"
+                                      placeholder="Comparte tu opinión sobre esta película..."
+                                      required minlength="10" maxlength="1000"></textarea>
+                            <div class="form-text">Mínimo 10 caracteres, máximo 1000.</div>
+                        </div>
+
+                        <button type="submit" class="btn" style="background: var(--accent-color); color: white;">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Publicar Reseña
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Mensaje si ya tiene reseña -->
+                <div class="review-form" th:if="${userReview != null}">
+                    <h4><i class="fas fa-check-circle me-2"></i>Tu Reseña</h4>
+                    <div class="alert alert-info">
+                        <strong>Ya has valorado esta película</strong><br>
+                        Puntuación: <span th:each="i : ${#numbers.sequence(1, userReview.stars)}" class="text-warning">★</span><br>
+                        <em th:text="${userReview.text}">Tu comentario...</em>
+                    </div>
+                </div>
+
+                <!-- Mensaje si no está autenticado -->
+                <div class="review-form" th:unless="${isAuthenticated}">
+                    <h4><i class="fas fa-sign-in-alt me-2"></i>Valora esta Película</h4>
+                    <div class="alert alert-warning">
+                        <strong>Inicia sesión para poder valorar y comentar películas</strong><br>
+                        <a th:href="@{/login}" class="btn btn-sm mt-2" style="background: var(--accent-color); color: white;">
+                            Iniciar Sesión
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Lista de Reseñas -->
+                <div class="mt-4">
+                    <h4><i class="fas fa-comments me-2"></i>Reseñas de Usuarios
+                        <span class="badge" style="background: var(--accent-color);" th:text="${movieStats.totalReviews}">0</span>
+                    </h4>
+
+                    <div th:if="${#lists.isEmpty(reviews)}" class="text-center py-4 text-muted">
+                        <i class="fas fa-comment-slash fa-3x mb-3"></i>
+                        <p>Aún no hay reseñas para esta película.<br>¡Sé el primero en valorarla!</p>
+                    </div>
+
+                    <div th:each="review : ${reviews}" class="review-card">
+                        <div class="review-header">
+                            <span class="review-author" th:text="${review.user.username}">Usuario</span>
+                            <div>
+                                <span class="review-rating">
+                                    <span th:each="i : ${#numbers.sequence(1, review.stars)}" class="fas fa-star"></span>
+                                    <span th:each="i : ${#numbers.sequence(review.stars + 1, 5)}" class="far fa-star"></span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="review-text" th:text="${review.text}">
+                            Texto de la reseña aquí...
+                        </div>
+
+                        <div class="review-actions">
+                            <button class="like-button"
+                                    th:if="${isAuthenticated}"
+                                    th:onclick="'likeReview(' + ${review.id} + ')'"
+                                    th:id="'like-btn-' + ${review.id}">
+                                <i class="fas fa-thumbs-up me-1"></i>
+                                <span th:text="${review.likesCount ?: 0}">0</span>
+                            </button>
+
+                            <span class="review-date" th:text="${#temporals.format(review.createdAt, 'dd/MM/yyyy HH:mm')}">
+                                01/01/2023 12:00
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sistema de valoración por estrellas
+        document.addEventListener('DOMContentLoaded', function() {
+            const starInputs = document.querySelectorAll('.star-rating input');
+            const starLabels = document.querySelectorAll('.star-rating label');
+
+            starLabels.forEach((label, index) => {
+                label.addEventListener('mouseover', function() {
+                    highlightStars(index + 1);
+                });
+
+                label.addEventListener('click', function() {
+                    const input = document.getElementById(label.getAttribute('for'));
+                    if (input) {
+                        input.checked = true;
+                        highlightStars(index + 1);
+                    }
+                });
+            });
+
+            document.querySelector('.star-rating').addEventListener('mouseleave', function() {
+                const checkedInput = document.querySelector('.star-rating input:checked');
+                if (checkedInput) {
+                    highlightStars(parseInt(checkedInput.value));
+                } else {
+                    highlightStars(0);
+                }
+            });
+
+            function highlightStars(rating) {
+                starLabels.forEach((label, index) => {
+                    if (index < rating) {
+                        label.style.color = '#ffc107';
+                    } else {
+                        label.style.color = '#666';
+                    }
+                });
+            }
+        });
+
+        // Función para dar like a reseñas
+        function likeReview(reviewId) {
+            const button = document.getElementById('like-btn-' + reviewId);
+
+            fetch('/review/' + reviewId + '/like', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(data => {
+                if (data.startsWith('success')) {
+                    // Incrementar contador (simplificado)
+                    const countSpan = button.querySelector('span');
+                    const currentCount = parseInt(countSpan.textContent) || 0;
+                    countSpan.textContent = currentCount + 1;
+
+                    // Marcar como liked
+                    button.classList.add('liked');
+                    button.disabled = true;
+                } else {
+                    alert(data.replace('error:', ''));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al dar like a la reseña');
+            });
+        }
+    </script>
+</body>
+</html>

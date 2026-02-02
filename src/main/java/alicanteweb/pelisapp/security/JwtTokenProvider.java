@@ -88,4 +88,20 @@ public class JwtTokenProvider {
         Date exp = claims.getExpiration();
         return exp == null ? 0L : exp.getTime();
     }
+
+    /**
+     * Crea un token de confirmación de email
+     */
+    public String createConfirmationToken(String username, long validityInMilliseconds) {
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + validityInMilliseconds);
+
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .claim("typ", "confirmation")
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
 }

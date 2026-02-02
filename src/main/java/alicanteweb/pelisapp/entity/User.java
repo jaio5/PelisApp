@@ -44,19 +44,10 @@ public class User {
 
     private Instant registeredAt;
 
+    @Column(name = "email_confirmed", nullable = false)
+    private boolean emailConfirmed = false;
+
     private Integer criticLevel = 0; // computed based on likes per review
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "usuario_roles",
-            joinColumns = @JoinColumn(name = "usuario_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id"))
-    private Set<Role> roles = new HashSet<>();
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "usuario_etiquetas",
-            joinColumns = @JoinColumn(name = "usuario_id"),
-            inverseJoinColumns = @JoinColumn(name = "etiqueta_id"))
-    private Set<Tag> tags = new HashSet<>();
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<Review> reviews = new HashSet<>();
@@ -71,6 +62,20 @@ public class User {
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<UsuarioArchivement> usuarioArchievements = new HashSet<>();
 
+    // Roles (ManyToMany)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "usuario_roles",
+            joinColumns = @JoinColumn(name = "usuario_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id"))
+    private Set<Role> roles = new HashSet<>();
+
+    // Tags / Badges (ManyToMany)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "usuario_etiquetas",
+            joinColumns = @JoinColumn(name = "usuario_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "etiqueta_id", referencedColumnName = "id"))
+    private Set<Tag> tags = new HashSet<>();
+
     // Defensive getters for collections to avoid exposing internal mutable sets
     public Set<Role> getRoles() {
         return Collections.unmodifiableSet(roles == null ? Collections.emptySet() : new HashSet<>(roles));
@@ -80,41 +85,24 @@ public class User {
         return Collections.unmodifiableSet(tags == null ? Collections.emptySet() : new HashSet<>(tags));
     }
 
-    // métodos helper para manipular las colecciones de forma segura
-    public boolean addTag(Tag tag) {
-        if (this.tags == null) this.tags = new HashSet<>();
-        return this.tags.add(tag);
-    }
-
-    public boolean removeTag(Tag tag) {
-        if (this.tags == null) return false;
-        return this.tags.remove(tag);
-    }
-
-    public boolean addRole(Role role) {
+    // Helper methods to manipulate collections safely
+    public void addRole(Role role) {
         if (this.roles == null) this.roles = new HashSet<>();
-        return this.roles.add(role);
+        this.roles.add(role);
     }
 
-    public boolean removeRole(Role role) {
-        if (this.roles == null) return false;
-        return this.roles.remove(role);
+    public void removeRole(Role role) {
+        if (this.roles == null) return;
+        this.roles.remove(role);
     }
 
-    public Set<Review> getReviews() {
-        return Collections.unmodifiableSet(reviews == null ? Collections.emptySet() : new HashSet<>(reviews));
+    public void addTag(Tag tag) {
+        if (this.tags == null) this.tags = new HashSet<>();
+        this.tags.add(tag);
     }
 
-    public Set<Following> getFollowing() {
-        return Collections.unmodifiableSet(following == null ? Collections.emptySet() : new HashSet<>(following));
+    public void removeTag(Tag tag) {
+        if (this.tags == null) return;
+        this.tags.remove(tag);
     }
-
-    public Set<Following> getFollowers() {
-        return Collections.unmodifiableSet(followers == null ? Collections.emptySet() : new HashSet<>(followers));
-    }
-
-    public Set<UsuarioArchivement> getUsuarioArchievements() {
-        return Collections.unmodifiableSet(usuarioArchievements == null ? Collections.emptySet() : new HashSet<>(usuarioArchievements));
-    }
-
 }

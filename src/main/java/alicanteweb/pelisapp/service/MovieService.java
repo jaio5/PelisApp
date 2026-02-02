@@ -6,100 +6,37 @@ import alicanteweb.pelisapp.repository.MovieRepository;
 import alicanteweb.pelisapp.repository.CommentRepository;
 import alicanteweb.pelisapp.tmdb.TMDBClient;
 import com.fasterxml.jackson.databind.JsonNode;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Servicio para gestión de películas con funcionalidad básica.
+ */
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class MovieService {
 
     private final TMDBClient tmdbClient;
     private final MovieRepository movieRepository;
     private final CommentRepository commentRepository;
-
-    public MovieService(TMDBClient tmdbClient,
-                        MovieRepository movieRepository,
-                        CommentRepository commentRepository) {
-        this.tmdbClient = tmdbClient;
-        this.movieRepository = movieRepository;
-        this.commentRepository = commentRepository;
-    }
-
-    // Mapper explícito: fusiona campos desde el JsonNode de TMDB a la entidad Movie
-    private boolean mergeFromTmdb(Movie movie, JsonNode details) {
-        if (details == null) return false;
-
-        boolean changed = false;
-
-        // Título
-        if (isBlank(movie.getTitle()) && details.hasNonNull("title")) {
-            movie.setTitle(details.path("title").asText(null));
-            changed = true;
-        }
-
-        // Overview/Descripción
-        if ((isBlank(movie.getDescription())) && details.hasNonNull("overview")) {
-            movie.setDescription(details.path("overview").asText(null));
-            changed = true;
-        }
-
-        // Fecha de estreno
-        if (movie.getReleaseDate() == null && details.hasNonNull("release_date")) {
-            String rd = details.path("release_date").asText(null);
-            if (rd != null && !rd.isBlank()) {
-                try {
-                    LocalDate date = LocalDate.parse(rd);
-                    movie.setReleaseDate(date);
-                    changed = true;
-                } catch (DateTimeParseException e) {
-                    // formato inesperado: ignorar
-                }
-            }
-        }
-
-        // Runtime
-        if (movie.getRuntimeMinutes() == null && details.hasNonNull("runtime")) {
-            if (details.path("runtime").canConvertToInt()) {
-                movie.setRuntimeMinutes(details.path("runtime").asInt());
-                changed = true;
-            }
-        }
-
-        // Poster path -> construir URL completa si es necesario
-        if (isBlank(movie.getPosterPath()) && details.hasNonNull("poster_path")) {
-            String poster = details.path("poster_path").asText(null);
-            if (poster != null && !poster.isBlank()) {
-                movie.setPosterPath(poster);
-                changed = true;
-            }
-        }
-
-        // Otros campos (tmdb id ya debe estar establecido por quien llama)
-        return changed;
-    }
-
-    private boolean isBlank(String s) {
-        return s == null || s.isBlank();
-    }
+    private final MovieImportService movieImportService;
 
     public MovieDetailsDTO getCombinedByMovieId(Long id) {
         Optional<Movie> opt = movieRepository.findById(id);
         if (opt.isEmpty()) return null;
         Movie movie = opt.get();
 
-        JsonNode details = null;
+        // Si la película tiene tmdbId, delegar a MovieImportService para actualizar campos desde TMDB
         if (movie.getTmdbId() != null) {
-            details = tmdbClient.getMovieDetails(movie.getTmdbId());
-        }
-
-        // Si hay datos remotos, aplicar merge no destructivo
-        if (details != null) {
-            boolean changed = mergeFromTmdb(movie, details);
-            if (changed) movieRepository.save(movie);
+            movieImportService.importOrUpdateByTmdb(movie.getTmdbId());
+            // refrescar entidad
+            movie = movieRepository.findById(id).orElse(movie);
         }
 
         MovieDetailsDTO dto = new MovieDetailsDTO();
@@ -107,8 +44,14 @@ public class MovieService {
         dto.setTmdbId(movie.getTmdbId());
         dto.setTitle(movie.getTitle());
         dto.setOverview(movie.getDescription());
-        dto.setPosterPath(movie.getPosterPath());
+        dto.setPosterPath(movie.getPosterPath() != null ? movie.getPosterPath() : movie.getPosterLocalPath());
         dto.setReleaseDate(movie.getReleaseDate() != null ? movie.getReleaseDate().toString() : null);
+
+        // Try to get credits via TMDB directly for display (non-authoritative)
+        JsonNode details = null;
+        if (movie.getTmdbId() != null) {
+            details = tmdbClient.getMovieDetails(movie.getTmdbId());
+        }
 
         // Cast (primeros 6)
         List<String> cast = new ArrayList<>();
@@ -136,18 +79,10 @@ public class MovieService {
     }
 
     public MovieDetailsDTO getCombinedByTmdbId(Long tmdbId) {
-        Optional<Movie> existing = movieRepository.findByTmdbId(tmdbId);
-        if (existing.isPresent()) return getCombinedByMovieId(existing.get().getId());
-
-        JsonNode details = tmdbClient.getMovieDetails(tmdbId);
-        if (details == null) return null;
-
-        Movie m = new Movie();
-        m.setTmdbId(tmdbId);
-        mergeFromTmdb(m, details);
-        movieRepository.save(m);
-
+        // Delegar en MovieImportService: importOrUpdateByTmdb devuelve la entidad persistida
+        Movie m = movieImportService.importOrUpdateByTmdb(tmdbId);
+        if (m == null) return null;
         return getCombinedByMovieId(m.getId());
     }
-
 }
+
