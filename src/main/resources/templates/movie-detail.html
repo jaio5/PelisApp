@@ -332,6 +332,85 @@
             </div>
         </div>
 
+        <!-- Sección de Reparto y Dirección -->
+        <div class="cast-section mb-5">
+            <!-- DEBUG: Verificar datos -->
+            <div class="alert alert-info">
+                <strong>DEBUG INFO:</strong><br>
+                movieDetails existe: <span th:text="${movieDetails != null}">false</span><br>
+                <span th:if="${movieDetails != null}">
+                    Directores: <span th:text="${movieDetails.directors != null ? #lists.size(movieDetails.directors) : 'null'}">0</span><br>
+                    Cast: <span th:text="${movieDetails.castMembers != null ? #lists.size(movieDetails.castMembers) : 'null'}">0</span><br>
+                </span>
+            </div>
+
+            <!-- Directores -->
+            <div class="mb-4" th:if="${movieDetails != null and movieDetails.directors != null and not #lists.isEmpty(movieDetails.directors)}">
+                <h4><i class="fas fa-video me-2"></i>Dirección</h4>
+                <div class="row g-3">
+                    <div th:each="director : ${movieDetails.directors}" class="col-md-3 col-sm-4 col-6">
+                        <div class="cast-card">
+                            <div class="cast-image-container">
+                                <img th:if="${director.profileUrl != null}"
+                                     th:src="${director.profileUrl}"
+                                     th:alt="${director.name}"
+                                     class="cast-image">
+                                <div th:unless="${director.profileUrl != null}"
+                                     class="cast-image cast-no-image">
+                                    <i class="fas fa-user fa-2x"></i>
+                                </div>
+                            </div>
+                            <div class="cast-info">
+                                <div class="cast-name" th:text="${director.name}">Nombre Director</div>
+                                <div class="cast-character text-muted" th:text="${director.job}">Director</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reparto -->
+            <div class="mb-4" th:if="${movieDetails != null and movieDetails.castMembers != null and not #lists.isEmpty(movieDetails.castMembers)}">
+                <h4><i class="fas fa-users me-2"></i>Reparto Principal</h4>
+                <div class="row g-3">
+                    <div th:each="actor : ${movieDetails.castMembers}" class="col-md-3 col-sm-4 col-6">
+                        <div class="cast-card">
+                            <div class="cast-image-container">
+                                <img th:if="${actor.profileUrl != null}"
+                                     th:src="${actor.profileUrl}"
+                                     th:alt="${actor.name}"
+                                     class="cast-image">
+                                <div th:unless="${actor.profileUrl != null}"
+                                     class="cast-image cast-no-image">
+                                    <i class="fas fa-user fa-2x"></i>
+                                </div>
+                            </div>
+                            <div class="cast-info">
+                                <div class="cast-name" th:text="${actor.name}">Nombre Actor</div>
+                                <div class="cast-character text-muted" th:text="${actor.character}">Personaje</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensaje si no hay reparto -->
+            <div th:if="${movieDetails == null or movieDetails.directors == null or #lists.isEmpty(movieDetails.directors)}">
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Información del Reparto</h5>
+                    <p>El reparto no está disponible para esta película. Esto puede deberse a:</p>
+                    <ul>
+                        <li>La película no tiene TMDB ID asociado</li>
+                        <li>TMDB API no está configurado correctamente</li>
+                        <li>La película no tiene información de reparto en TMDB</li>
+                    </ul>
+                    <small class="text-muted">
+                        TMDB ID: <span th:text="${movie.tmdbId ?: 'No disponible'}">-</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-lg-4">
                 <!-- Sección de Valoración Promedio -->

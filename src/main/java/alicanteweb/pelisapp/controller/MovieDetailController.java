@@ -41,6 +41,20 @@ public class MovieDetailController {
             Movie movie = movieRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Película no encontrada"));
 
+            // Obtener detalles completos incluyendo reparto con fotos
+            MovieDetailsDTO movieDetails = null;
+            try {
+                movieDetails = movieService.getCombinedByMovieId(id);
+                log.info("Detalles de película obtenidos - ID: {}, TMDB ID: {}, Reparto: {}, Directores: {}",
+                    id, movie.getTmdbId(),
+                    movieDetails != null && movieDetails.getCastMembers() != null ? movieDetails.getCastMembers().size() : 0,
+                    movieDetails != null && movieDetails.getDirectors() != null ? movieDetails.getDirectors().size() : 0
+                );
+            } catch (Exception e) {
+                log.error("Error obteniendo detalles de reparto para película {}: {}", id, e.getMessage());
+                // Continuamos sin el reparto si hay error
+            }
+
             // Obtener reseñas ordenadas por fecha (más recientes primero)
             List<Review> reviews = reviewRepository.findByMovieIdOrderByCreatedAtDesc(movie.getId());
 
@@ -60,6 +74,7 @@ public class MovieDetailController {
 
             // Añadir datos al modelo
             model.addAttribute("movie", movie);
+            model.addAttribute("movieDetails", movieDetails); // ← Añadir detalles con reparto
             model.addAttribute("reviews", reviews);
             model.addAttribute("movieStats", stats);
             model.addAttribute("userReview", userReview);

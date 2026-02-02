@@ -5,6 +5,7 @@ import alicanteweb.pelisapp.entity.CategoryEntity;
 import alicanteweb.pelisapp.entity.Movie;
 import alicanteweb.pelisapp.repository.CategoryRepository;
 import alicanteweb.pelisapp.repository.MovieRepository;
+import alicanteweb.pelisapp.service.TMDBMovieLoaderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ public class HomeController {
 
     private final MovieRepository movieRepository;
     private final CategoryRepository categoryRepository;
+    private final TMDBMovieLoaderService tmdbMovieLoaderService;
 
     @GetMapping("/")
     public String home(Model model,
@@ -37,6 +39,9 @@ public class HomeController {
                        @RequestParam(value = "genre", required = false) String genre) {
 
         try {
+            // Verificar si hay pocas películas y cargar más automáticamente
+            ensureMinimumMovies();
+
             PaginationParams pagination = validatePaginationParams(page, size);
             Page<Movie> moviesPage = getMoviesByGenre(genre, pagination);
 
@@ -128,6 +133,29 @@ public class HomeController {
             pageNumbers.add(i);
         }
         return pageNumbers;
+    }
+
+    /**
+     * Asegura que haya un mínimo de películas en la base de datos.
+     * Si hay menos de 20 películas, carga más desde TMDB.
+     */
+    private void ensureMinimumMovies() {
+        try {
+            long movieCount = movieRepository.count();
+            final int MIN_MOVIES = 20;
+
+            if (movieCount < MIN_MOVIES) {
+                log.info("Solo hay {} películas en BD, cargando más desde TMDB...", movieCount);
+
+                // Cargar 2 páginas de películas populares (40 películas aproximadamente)
+                tmdbMovieLoaderService.loadPopularMovies(2);
+
+                log.info("Carga automática completada. Total películas ahora: {}", movieRepository.count());
+            }
+        } catch (Exception e) {
+            log.warn("Error en carga automática de películas: {}", e.getMessage());
+            // No fallar la aplicación por esto, solo loguear
+        }
     }
 
     /**

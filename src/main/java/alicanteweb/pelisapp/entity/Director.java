@@ -26,6 +26,9 @@ public class Director {
 
     private String profilePath;
 
+    @Column(name = "profile_local_path")
+    private String profileLocalPath; // local file path for downloaded images
+
     @ManyToMany(mappedBy = "directors", fetch = FetchType.LAZY)
     private Set<Movie> movies = new HashSet<>();
 }

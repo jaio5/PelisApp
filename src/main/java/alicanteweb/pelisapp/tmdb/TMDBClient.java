@@ -72,14 +72,22 @@ public class TMDBClient {
         log.debug("Requesting TMDB popular page={} using {}", page, (bearerToken != null && !bearerToken.isBlank()) ? "Bearer token" : (apiKey != null && !apiKey.isBlank() ? "API key" : "no auth"));
         try {
             JsonNode resp = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/movie/popular")
-                            .queryParam("page", page)
-                            .queryParam("language", "es-ES")
-                            .build())
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/movie/popular")
+                                .queryParam("page", page)
+                                .queryParam("language", "es-ES");
+
+                        // Añadir API key como query param si no hay bearer token
+                        if ((bearerToken == null || bearerToken.isBlank()) && apiKey != null && !apiKey.isBlank()) {
+                            uriBuilder.queryParam("api_key", apiKey);
+                        }
+
+                        return uriBuilder.build();
+                    })
                     .headers(h -> {
-                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
-                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                        if (bearerToken != null && !bearerToken.isBlank()) {
+                            h.setBearerAuth(bearerToken);
+                        }
                     })
                     .retrieve()
                     .bodyToMono(JsonNode.class)
@@ -106,12 +114,20 @@ public class TMDBClient {
         log.debug("Getting TMDB trending {} for {}", mediaType, timeWindow);
         try {
             JsonNode resp = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/trending/{media_type}/{time_window}")
-                            .build(mediaType, timeWindow))
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/trending/{media_type}/{time_window}");
+
+                        // Añadir API key como query param si no hay bearer token
+                        if ((bearerToken == null || bearerToken.isBlank()) && apiKey != null && !apiKey.isBlank()) {
+                            uriBuilder.queryParam("api_key", apiKey);
+                        }
+
+                        return uriBuilder.build(mediaType, timeWindow);
+                    })
                     .headers(h -> {
-                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
-                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                        if (bearerToken != null && !bearerToken.isBlank()) {
+                            h.setBearerAuth(bearerToken);
+                        }
                     })
                     .retrieve()
                     .bodyToMono(JsonNode.class)
@@ -163,14 +179,22 @@ public class TMDBClient {
         log.debug("Requesting TMDB movie details for tmdbId={} using {}", tmdbId, (bearerToken != null && !bearerToken.isBlank()) ? "Bearer token" : (apiKey != null && !apiKey.isBlank() ? "API key" : "no auth"));
         try {
             JsonNode resp = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/movie/{id}")
-                            .queryParam("language", "es-ES")
-                            .queryParam("append_to_response", "credits")
-                            .build(tmdbId))
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/movie/{id}")
+                                .queryParam("language", "es-ES")
+                                .queryParam("append_to_response", "credits");
+
+                        // Añadir API key como query param si no hay bearer token
+                        if ((bearerToken == null || bearerToken.isBlank()) && apiKey != null && !apiKey.isBlank()) {
+                            uriBuilder.queryParam("api_key", apiKey);
+                        }
+
+                        return uriBuilder.build(tmdbId);
+                    })
                     .headers(h -> {
-                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
-                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                        if (bearerToken != null && !bearerToken.isBlank()) {
+                            h.setBearerAuth(bearerToken);
+                        }
                     })
                     .retrieve()
                     .bodyToMono(JsonNode.class)
@@ -230,5 +254,71 @@ public class TMDBClient {
             log.warn("TMDB searchMovie failed: {}", e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Obtiene información de paginación para películas populares
+     */
+    public JsonNode getPopularInfo() {
+        try {
+            JsonNode resp = webClient.get()
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/movie/popular")
+                                .queryParam("page", 1)
+                                .queryParam("language", "es-ES");
+
+                        if ((bearerToken == null || bearerToken.isBlank()) && apiKey != null && !apiKey.isBlank()) {
+                            uriBuilder.queryParam("api_key", apiKey);
+                        }
+
+                        return uriBuilder.build();
+                    })
+                    .headers(h -> {
+                        if (bearerToken != null && !bearerToken.isBlank()) {
+                            h.setBearerAuth(bearerToken);
+                        }
+                    })
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block(Duration.ofSeconds(10));
+
+            return resp;
+        } catch (Exception e) {
+            log.warn("Error getting popular info: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Obtiene el número total de páginas disponibles para películas top rated
+     */
+    public JsonNode getTopRatedInfo() {
+        try {
+            JsonNode resp = webClient.get()
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/movie/top_rated")
+                                .queryParam("page", 1)
+                                .queryParam("language", "es-ES");
+
+                        if ((bearerToken == null || bearerToken.isBlank()) && apiKey != null && !apiKey.isBlank()) {
+                            uriBuilder.queryParam("api_key", apiKey);
+                        }
+
+                        return uriBuilder.build();
+                    })
+                    .headers(h -> {
+                        if (bearerToken != null && !bearerToken.isBlank()) {
+                            h.setBearerAuth(bearerToken);
+                        }
+                    })
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block(Duration.ofSeconds(10));
+
+            return resp;
+        } catch (Exception e) {
+            log.warn("Error getting top rated info: {}", e.getMessage());
+            return null;
+        }
     }
 }
