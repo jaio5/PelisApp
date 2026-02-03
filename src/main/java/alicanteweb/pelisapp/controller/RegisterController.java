@@ -2,10 +2,12 @@ package alicanteweb.pelisapp.controller;
 
 import alicanteweb.pelisapp.entity.User;
 import alicanteweb.pelisapp.service.AuthService;
-import alicanteweb.pelisapp.service.MockEmailService;
+import alicanteweb.pelisapp.service.IEmailService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -13,9 +15,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
 
 /**
  * Controlador web para registro y confirmación de usuarios
+ * Maneja tanto email real como simulado según configuración
  */
 @Controller
 @RequiredArgsConstructor
@@ -23,7 +27,11 @@ import jakarta.validation.Valid;
 public class RegisterController {
 
     private final AuthService authService;
-    private final MockEmailService emailService; // Usar MockEmailService en desarrollo
+    private final IEmailService emailService; // Se auto-configura según app.email.enabled
+
+    @Value("${app.email.enabled:false}")
+    private boolean emailEnabled;
+
 
     @GetMapping("/register")
     public String showRegisterForm(Model model) {
@@ -36,7 +44,8 @@ public class RegisterController {
                                @RequestParam String confirmPassword,
                                BindingResult result,
                                Model model,
-                               RedirectAttributes redirectAttributes) {
+                               RedirectAttributes redirectAttributes,
+                               HttpServletRequest request) {
 
         // Validaciones adicionales de seguridad
         if (!validateUserInput(user, confirmPassword, model)) {
@@ -44,6 +53,11 @@ public class RegisterController {
         }
 
         if (result.hasErrors()) {
+            return "register";
+        }
+
+        // Verificar límite de tasa de registro
+        if (!checkRegistrationRateLimit(request, model)) {
             return "register";
         }
 
@@ -57,10 +71,17 @@ public class RegisterController {
                                                registeredUser.getUsername(),
                                                confirmationToken);
 
-            redirectAttributes.addFlashAttribute("success",
-                "✅ Cuenta creada exitosamente. En modo desarrollo, revisa la consola del servidor para el enlace de confirmación.");
+            // Mensaje dinámico según configuración de email
+            String successMessage;
+            if (emailEnabled) {
+                successMessage = "✅ Cuenta creada exitosamente. Te hemos enviado un email de confirmación a " +
+                               user.getEmail() + ". Revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.";
+            } else {
+                successMessage = "✅ Cuenta creada exitosamente. En modo desarrollo, revisa la consola del servidor para el enlace de confirmación.";
+            }
 
-            log.info("Usuario registrado: {} - Email de confirmación simulado enviado", user.getUsername());
+            redirectAttributes.addFlashAttribute("success", successMessage);
+            log.info("Usuario registrado: {} - Email {} enviado", user.getUsername(), emailEnabled ? "real" : "simulado");
 
             return "redirect:/login";
 
@@ -83,58 +104,47 @@ public class RegisterController {
             hasError = true;
         }
 
-        // Validar fortaleza de contraseña
-        if (!isPasswordStrong(user.getPassword())) {
+        // Validar fortaleza de contraseña usando el servicio
+        if (!authService.isPasswordStrong(user.getPassword())) {
             model.addAttribute("errorPasswordWeak",
                 "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial");
             hasError = true;
         }
 
-        // Validar username (sin espacios, caracteres especiales peligrosos)
-        if (!isUsernameValid(user.getUsername())) {
+        // Validar username usando el servicio
+        if (!authService.isUsernameValid(user.getUsername())) {
             model.addAttribute("errorUsername",
-                "El nombre de usuario solo puede contener letras, números y guiones bajos");
+                "El nombre de usuario debe tener 3-20 caracteres, solo letras, números y guiones bajos, y no puede empezar con número o guión bajo");
             hasError = true;
         }
 
-        // Validar email formato
-        if (!isEmailValid(user.getEmail())) {
+        // Validar email usando el servicio
+        if (!authService.isEmailValid(user.getEmail())) {
             model.addAttribute("errorEmail", "Formato de email inválido");
+            hasError = true;
+        }
+
+        // Validar displayName
+        if (user.getDisplayName() != null && (user.getDisplayName().length() > 50 ||
+            user.getDisplayName().trim().isEmpty())) {
+            model.addAttribute("errorDisplayName",
+                "El nombre para mostrar debe tener entre 1 y 50 caracteres");
+            hasError = true;
+        }
+
+        // Validación adicional de seguridad: detectar intentos de inyección
+        if (containsSuspiciousContent(user.getUsername()) ||
+            containsSuspiciousContent(user.getEmail()) ||
+            containsSuspiciousContent(user.getDisplayName())) {
+
+            log.warn("Intento de registro con contenido sospechoso");
+            model.addAttribute("error", "Datos de entrada inválidos");
             hasError = true;
         }
 
         return !hasError;
     }
 
-    /**
-     * Verifica que la contraseña sea lo suficientemente fuerte
-     */
-    private boolean isPasswordStrong(String password) {
-        if (password == null || password.length() < 8) return false;
-
-        boolean hasUpper = password.chars().anyMatch(Character::isUpperCase);
-        boolean hasLower = password.chars().anyMatch(Character::isLowerCase);
-        boolean hasDigit = password.chars().anyMatch(Character::isDigit);
-        boolean hasSpecial = password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*");
-
-        return hasUpper && hasLower && hasDigit && hasSpecial;
-    }
-
-    /**
-     * Verifica que el username sea válido y seguro
-     */
-    private boolean isUsernameValid(String username) {
-        if (username == null || username.length() < 3 || username.length() > 20) return false;
-        return username.matches("^[a-zA-Z0-9_]+$");
-    }
-
-    /**
-     * Verifica formato básico de email
-     */
-    private boolean isEmailValid(String email) {
-        if (email == null) return false;
-        return email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
-    }
 
     @GetMapping("/confirm-account")
     public String confirmAccount(@RequestParam("token") String token,
@@ -186,4 +196,67 @@ public class RegisterController {
 
         return "redirect:/login";
     }
+
+    /**
+     * Implementa límite de tasa para registros por IP
+     */
+    private boolean checkRegistrationRateLimit(HttpServletRequest request, Model model) {
+        HttpSession session = request.getSession();
+        String clientIp = getClientIpAddress(request);
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime lastRegistration = (LocalDateTime) session.getAttribute("lastRegistrationAttempt");
+
+        if (lastRegistration != null) {
+            long minutesSinceLastAttempt = java.time.Duration.between(lastRegistration, now).toMinutes();
+
+            if (minutesSinceLastAttempt < 5) { // Mínimo 5 minutos entre registros
+                model.addAttribute("error",
+                    "Debes esperar al menos 5 minutos antes de crear otra cuenta.");
+                log.warn("Intento de registro demasiado rápido desde IP: {}", clientIp);
+                return false;
+            }
+        }
+
+        session.setAttribute("lastRegistrationAttempt", now);
+        return true;
+    }
+
+    /**
+     * Verifica si hay contenido potencialmente malicioso
+     */
+    private boolean containsSuspiciousContent(String content) {
+        if (content == null) return false;
+
+        String lower = content.toLowerCase();
+        String[] suspiciousPatterns = {
+            "<script", "javascript:", "vbscript:", "onload=", "onerror=",
+            "eval(", "document.", "window.", "alert(", "confirm(",
+            "drop table", "delete from", "insert into", "update set",
+            "union select", "' or '", "' and '", "--", "/*", "*/"
+        };
+
+        for (String pattern : suspiciousPatterns) {
+            if (lower.contains(pattern)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private String getClientIpAddress(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+
+        String xRealIP = request.getHeader("X-Real-IP");
+        if (xRealIP != null && !xRealIP.isEmpty()) {
+            return xRealIP;
+        }
+
+        return request.getRemoteAddr();
+    }
+
 }

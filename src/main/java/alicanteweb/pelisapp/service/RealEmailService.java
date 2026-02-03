@@ -5,11 +5,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
@@ -18,10 +20,10 @@ import jakarta.mail.internet.MimeMessage;
  * Se activa cuando app.email.enabled=true Y JavaMailSender está disponible
  */
 @Service("realEmailService")
+@Primary // Se convierte en el servicio principal cuando está habilitado
 @Slf4j
 @ConditionalOnProperty(name = "app.email.enabled", havingValue = "true")
-@ConditionalOnBean(JavaMailSender.class)
-public class RealEmailService {
+public class RealEmailService implements IEmailService {
 
     @Autowired(required = false)
     private JavaMailSender mailSender;
@@ -35,6 +37,26 @@ public class RealEmailService {
     @Value("${app.name:PelisApp}")
     private String appName;
 
+    @PostConstruct
+    public void init() {
+        log.info("🔧 Inicializando RealEmailService...");
+        log.info("📧 Email origen: {}", fromEmail != null ? fromEmail : "❌ NO CONFIGURADO");
+        log.info("🌍 Base URL: {}", baseUrl);
+        log.info("📱 Nombre app: {}", appName);
+        log.info("📮 JavaMailSender: {}", mailSender != null ? "✅ CONFIGURADO" : "❌ NO CONFIGURADO");
+
+        if (mailSender == null) {
+            log.error("❌ CRÍTICO: JavaMailSender no está disponible. Verifica la configuración de email.");
+        }
+
+        if (fromEmail == null || fromEmail.isEmpty()) {
+            log.error("❌ CRÍTICO: spring.mail.username no está configurado.");
+        } else {
+            log.info("✅ RealEmailService inicializado correctamente");
+        }
+    }
+
+    @Override
     public void sendConfirmationEmail(String toEmail, String username, String confirmationToken) {
         // Verificar que el servicio está configurado correctamente
         if (mailSender == null) {
@@ -79,6 +101,7 @@ public class RealEmailService {
         }
     }
 
+    @Override
     public void sendSimpleConfirmationEmail(String toEmail, String username, String confirmationToken) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();

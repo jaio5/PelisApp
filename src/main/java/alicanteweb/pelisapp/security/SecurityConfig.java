@@ -14,6 +14,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
 
 @Configuration
 @EnableMethodSecurity
@@ -36,43 +45,76 @@ public class SecurityConfig {
 
         http
             .csrf(AbstractHttpConfigurer::disable)
-            // Usar sesiones para login web, JWT para API
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+
+            // Configuración de CORS
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+            // Control de sesiones básico
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                .maximumSessions(3)
+                .maxSessionsPreventsLogin(false)
+                .sessionRegistry(new org.springframework.security.core.session.SessionRegistryImpl())
+            )
+
             .authorizeHttpRequests(auth -> {
                 // Rutas públicas
                 auth.requestMatchers("/", "/login", "/register").permitAll();
-                auth.requestMatchers("/confirm-account", "/resend-confirmation").permitAll();
+                auth.requestMatchers("/confirm-account/**", "/resend-confirmation").permitAll();
                 auth.requestMatchers("/api/auth/**").permitAll();
                 auth.requestMatchers("/css/**", "/js/**", "/images/**").permitAll();
-                auth.requestMatchers("/error").permitAll();
-                auth.requestMatchers("/pelicula/**").permitAll(); // Permitir ver detalles sin login
+                auth.requestMatchers("/error", "/favicon.ico").permitAll();
+                auth.requestMatchers("/pelicula/**").permitAll();
+                auth.requestMatchers("/peliculas/**").permitAll();
+
+                // Endpoints de diagnóstico (solo en desarrollo)
+                if (devMode) {
+                    auth.requestMatchers("/tmdb/setup", "/test-tmdb-simple", "/diagnostico/**").permitAll();
+                    auth.requestMatchers("/admin/users-management/**").permitAll(); // TEMPORAL para gestión de usuarios
+                }
+
+                // Rutas administrativas
+                auth.requestMatchers("/admin/**").hasRole("ADMIN");
 
                 // Rutas que requieren autenticación
-                auth.requestMatchers("/perfil/**", "/admin/**").authenticated();
-                auth.requestMatchers("/pelicula/*/review").authenticated(); // Solo valorar requiere login
-                auth.requestMatchers("/review/*/like").authenticated();
+                auth.requestMatchers("/perfil/**", "/profile/**").authenticated();
+                auth.requestMatchers("/review/**").authenticated();
+                auth.requestMatchers("/api/user/**").authenticated();
+                auth.requestMatchers(HttpMethod.POST, "/pelicula/*/review").authenticated();
+                auth.requestMatchers(HttpMethod.POST, "/review/*/like").authenticated();
 
-                // Por defecto, permitir acceso (modo permisivo para desarrollo)
+                // Por defecto permitir acceso (para desarrollo)
                 auth.anyRequest().permitAll();
             })
+
             // Configuración de login por formulario
             .formLogin(form -> form
                     .loginPage("/login")
                     .loginProcessingUrl("/login")
-                    .defaultSuccessUrl("/", true)
-                    .failureUrl("/login?error=true")
+                    .successHandler(authenticationSuccessHandler())
+                    .failureHandler(authenticationFailureHandler())
                     .usernameParameter("username")
                     .passwordParameter("password")
                     .permitAll()
             )
+
             // Configuración de logout
             .logout(logout -> logout
                     .logoutUrl("/logout")
                     .logoutSuccessUrl("/login?logout=true")
                     .invalidateHttpSession(true)
                     .deleteCookies("JSESSIONID")
+                    .clearAuthentication(true)
                     .permitAll()
             )
+
+            // Configuración para recordar usuario
+            .rememberMe(remember -> remember
+                    .key("pelisapp-remember-me-key")
+                    .tokenValiditySeconds(86400 * 7) // 7 días
+                    .userDetailsService(userDetailsService)
+            )
+
             // Solo añadir JWT filter para rutas de API
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -81,11 +123,39 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(12); // Strength factor aumentado para mayor seguridad
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:*", "https://localhost:*"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", configuration);
+        return source;
+    }
+
+    @Bean
+    public AuthenticationSuccessHandler authenticationSuccessHandler() {
+        return new CustomAuthenticationSuccessHandler();
+    }
+
+    @Bean
+    public AuthenticationFailureHandler authenticationFailureHandler() {
+        return new CustomAuthenticationFailureHandler();
+    }
+
+    @Bean
+    public HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
     }
 }

@@ -20,8 +20,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -130,23 +132,33 @@ public class AuthService {
     }
 
     /**
-     * Generar token de confirmación
+     * Generar token de confirmación con mayor seguridad
      */
     public String generateConfirmationToken(Long userId) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-        // Crear token JWT con expiración de 24 horas
-        return jwtTokenProvider.createConfirmationToken(user.getUsername(), 24 * 60 * 60 * 1000L);
+        // Verificar que el usuario no esté ya confirmado
+        if (user.isEmailConfirmed()) {
+            throw new IllegalStateException("La cuenta ya está confirmada");
+        }
+
+        // Crear token JWT con expiración de 24 horas y datos adicionales de seguridad
+        return jwtTokenProvider.createConfirmationToken(
+            user.getUsername(),
+            24 * 60 * 60 * 1000L, // 24 horas
+            user.getEmail()
+        );
     }
 
     /**
-     * Confirmar cuenta con token
+     * Confirmar cuenta con token y validaciones adicionales de seguridad
      */
     @Transactional
     public boolean confirmAccount(String token) {
         try {
             if (!jwtTokenProvider.validateToken(token)) {
+                log.warn("Token de confirmación inválido: {}", token.substring(0, Math.min(10, token.length())));
                 return false;
             }
 
@@ -154,17 +166,113 @@ public class AuthService {
             Optional<User> userOpt = userRepository.findByUsername(username);
 
             if (userOpt.isEmpty()) {
+                log.warn("Usuario no encontrado para confirmación: {}", username);
                 return false;
             }
 
             User user = userOpt.get();
+
+            // Verificar que el email del token coincide con el del usuario
+            String tokenEmail = jwtTokenProvider.getEmailFromToken(token);
+            if (!user.getEmail().equals(tokenEmail)) {
+                log.warn("Email del token no coincide para usuario: {}", username);
+                return false;
+            }
+
+            // Verificar que no esté ya confirmado
+            if (user.isEmailConfirmed()) {
+                log.info("Usuario ya confirmado: {}", username);
+                return true; // Ya está confirmado, considerar como éxito
+            }
+
             user.setEmailConfirmed(true);
             userRepository.save(user);
 
+            log.info("Cuenta confirmada exitosamente para usuario: {}", username);
             return true;
+
         } catch (Exception e) {
+            log.error("Error confirmando cuenta: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Generar nuevo token de confirmación para reenvío
+     */
+    @Transactional
+    public String resendConfirmationToken(String email) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new IllegalArgumentException("No existe usuario con ese email"));
+
+        if (user.isEmailConfirmed()) {
+            throw new IllegalStateException("La cuenta ya está confirmada");
+        }
+
+        return generateConfirmationToken(user.getId());
+    }
+
+    /**
+     * Validar fortaleza de contraseña
+     */
+    public boolean isPasswordStrong(String password) {
+        if (password == null || password.length() < 8) {
+            return false;
+        }
+
+        boolean hasUpper = password.chars().anyMatch(Character::isUpperCase);
+        boolean hasLower = password.chars().anyMatch(Character::isLowerCase);
+        boolean hasDigit = password.chars().anyMatch(Character::isDigit);
+        boolean hasSpecial = password.chars().anyMatch(c -> "!@#$%^&*()_+-=[]{}|;':\",./<>?".indexOf(c) >= 0);
+
+        return hasUpper && hasLower && hasDigit && hasSpecial;
+    }
+
+    /**
+     * Validar si el username es seguro
+     */
+    public boolean isUsernameValid(String username) {
+        if (username == null || username.length() < 3 || username.length() > 20) {
+            return false;
+        }
+
+        // Solo permitir letras, números y guiones bajos
+        if (!username.matches("^[a-zA-Z0-9_]+$")) {
+            return false;
+        }
+
+        // No permitir usernames que empiecen con números o guiones bajos
+        if (Character.isDigit(username.charAt(0)) || username.charAt(0) == '_') {
+            return false;
+        }
+
+        // Lista de nombres de usuario prohibidos
+        String[] prohibitedUsernames = {
+            "admin", "administrator", "root", "user", "test", "guest", "api", "support",
+            "info", "contact", "help", "service", "mail", "email", "www", "ftp"
+        };
+
+        String usernameLower = username.toLowerCase();
+        for (String prohibited : prohibitedUsernames) {
+            if (usernameLower.equals(prohibited)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Validar formato de email
+     */
+    public boolean isEmailValid(String email) {
+        if (email == null || email.length() < 5 || email.length() > 100) {
+            return false;
+        }
+
+        // Regex básico pero efectivo para email
+        String emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+        return email.matches(emailRegex);
     }
 
     /**
@@ -172,6 +280,101 @@ public class AuthService {
      */
     public User findUserByEmail(String email) {
         return userRepository.findByEmail(email).orElse(null);
+    }
+
+    /**
+     * Verificar si un usuario está habilitado para login
+     */
+    public boolean isUserEnabledForLogin(String username) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            return false;
+        }
+
+        User user = userOpt.get();
+        // Un usuario puede hacer login si está confirmado por email
+        return user.isEmailConfirmed();
+    }
+
+    /**
+     * Obtener información de seguridad del usuario
+     */
+    public UserSecurityInfo getUserSecurityInfo(String username) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        return UserSecurityInfo.builder()
+            .username(user.getUsername())
+            .email(user.getEmail())
+            .emailConfirmed(user.isEmailConfirmed())
+            .registeredAt(user.getRegisteredAt())
+            .roles(user.getRoles().stream().map(Role::getName).toList())
+            .build();
+    }
+
+    /**
+     * DTO para información de seguridad del usuario
+     */
+    public static class UserSecurityInfo {
+        private String username;
+        private String email;
+        private boolean emailConfirmed;
+        private java.time.Instant registeredAt;
+        private java.util.List<String> roles;
+
+        public static UserSecurityInfoBuilder builder() {
+            return new UserSecurityInfoBuilder();
+        }
+
+        public static class UserSecurityInfoBuilder {
+            private String username;
+            private String email;
+            private boolean emailConfirmed;
+            private java.time.Instant registeredAt;
+            private java.util.List<String> roles;
+
+            public UserSecurityInfoBuilder username(String username) {
+                this.username = username;
+                return this;
+            }
+
+            public UserSecurityInfoBuilder email(String email) {
+                this.email = email;
+                return this;
+            }
+
+            public UserSecurityInfoBuilder emailConfirmed(boolean emailConfirmed) {
+                this.emailConfirmed = emailConfirmed;
+                return this;
+            }
+
+            public UserSecurityInfoBuilder registeredAt(java.time.Instant registeredAt) {
+                this.registeredAt = registeredAt;
+                return this;
+            }
+
+            public UserSecurityInfoBuilder roles(java.util.List<String> roles) {
+                this.roles = roles;
+                return this;
+            }
+
+            public UserSecurityInfo build() {
+                UserSecurityInfo info = new UserSecurityInfo();
+                info.username = this.username;
+                info.email = this.email;
+                info.emailConfirmed = this.emailConfirmed;
+                info.registeredAt = this.registeredAt;
+                info.roles = this.roles;
+                return info;
+            }
+        }
+
+        // Getters
+        public String getUsername() { return username; }
+        public String getEmail() { return email; }
+        public boolean isEmailConfirmed() { return emailConfirmed; }
+        public java.time.Instant getRegisteredAt() { return registeredAt; }
+        public java.util.List<String> getRoles() { return roles; }
     }
 
 }

@@ -9,7 +9,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "director")
+@Table(name = "director", indexes = {
+    @Index(columnList = "tmdbId"),
+    @Index(columnList = "name")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,10 +27,15 @@ public class Director {
     @Column(nullable = false)
     private String name;
 
-    private String profilePath;
+    private String profilePath; // URL de TMDB
 
     @Column(name = "profile_local_path")
-    private String profileLocalPath; // local file path for downloaded images
+    private String profileLocalPath; // Ruta local de la imagen descargada
+
+    // Información adicional del director
+    private String biography; // Biografía del director
+    private String birthday; // Fecha de nacimiento
+    private String placeOfBirth; // Lugar de nacimiento
 
     @ManyToMany(mappedBy = "directors", fetch = FetchType.LAZY)
     private Set<Movie> movies = new HashSet<>();

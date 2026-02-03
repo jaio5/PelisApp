@@ -6,13 +6,14 @@ import org.springframework.stereotype.Service;
 
 /**
  * Mock del servicio de email para desarrollo.
- * Se activa cuando app.dev-mode=true Y app.email.enabled=false
+ * Se activa cuando app.email.enabled=false O cuando no hay configuración de mail
  */
-@Service
+@Service("mockEmailService")
 @Slf4j
 @ConditionalOnProperty(name = "app.email.enabled", havingValue = "false", matchIfMissing = true)
-public class MockEmailService {
+public class MockEmailService implements IEmailService {
 
+    @Override
     public void sendConfirmationEmail(String toEmail, String username, String confirmationToken) {
         log.info("📧 [MOCK EMAIL] Enviando confirmación a: {}", toEmail);
         log.info("👤 Usuario: {}", username);
@@ -30,6 +31,7 @@ public class MockEmailService {
         System.out.println("=".repeat(80) + "\n");
     }
 
+    @Override
     public void sendSimpleConfirmationEmail(String toEmail, String username, String confirmationToken) {
         sendConfirmationEmail(toEmail, username, confirmationToken);
     }

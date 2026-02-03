@@ -84,4 +84,51 @@ public final class AppConstants {
     public static final String ERROR_REVIEW_NOT_FOUND = "Reseña no encontrada";
     public static final String ERROR_INVALID_RATING = "La puntuación debe estar entre 1 y 5";
     public static final String ERROR_REVIEW_TOO_TOXIC = "Reseña rechazada por moderación";
+
+    // Constantes adicionales para TMDB API
+    public static final String TMDB_POPULAR_ENDPOINT = "/movie/popular";
+    public static final String TMDB_TOP_RATED_ENDPOINT = "/movie/top_rated";
+    public static final String TMDB_LANGUAGE_ES = "es-ES";
+    public static final String TMDB_AUTHORIZATION_HEADER = "Authorization";
+    public static final String TMDB_BEARER_PREFIX = "Bearer ";
+    public static final String TMDB_APPEND_CREDITS = "credits";
+
+    // Response keys de TMDB
+    public static final String TMDB_RESULTS_KEY = "results";
+    public static final String TMDB_ID_KEY = "id";
+    public static final String TMDB_TITLE_KEY = "title";
+    public static final String TMDB_OVERVIEW_KEY = "overview";
+    public static final String TMDB_POSTER_PATH_KEY = "poster_path";
+    public static final String TMDB_RELEASE_DATE_KEY = "release_date";
+    public static final String TMDB_RUNTIME_KEY = "runtime";
+    public static final String TMDB_GENRES_KEY = "genres";
+    public static final String TMDB_NAME_KEY = "name";
+    public static final String TMDB_CREDITS_KEY = "credits";
+    public static final String TMDB_CAST_KEY = "cast";
+    public static final String TMDB_CREW_KEY = "crew";
+    public static final String TMDB_JOB_KEY = "job";
+    public static final String TMDB_PROFILE_PATH_KEY = "profile_path";
+    public static final String TMDB_DIRECTOR_JOB = "Director";
+
+    // Constantes de flujo de carga
+    public static final int MAX_ACTORS_PER_MOVIE = 10;
+    public static final long MINIMUM_MOVIES_FOR_STARTUP = 10L;
+    public static final int DEFAULT_PAGES_TO_LOAD = 5;
+    public static final int DELAY_BETWEEN_REQUESTS_MS = 250;
+    public static final int DELAY_BETWEEN_PAGES_MS = 300;
+    public static final int MAX_PAGES_LIMIT = 500;
+    public static final int REQUEST_TIMEOUT_SECONDS = 10;
+
+    // Prefijos para nombres de archivos
+    public static final String MOVIE_FILE_PREFIX = "movie_";
+    public static final String ACTOR_FILE_PREFIX = "actor_";
+    public static final String DIRECTOR_FILE_PREFIX = "director_";
+
+    // Mensajes de logging mejorados
+    public static final String LOG_SEPARATOR = "═══════════════════════════════════════════════════";
+    public static final String LOG_SUCCESS_EMOJI = "✅";
+    public static final String LOG_ERROR_EMOJI = "❌";
+    public static final String LOG_WARNING_EMOJI = "⚠️";
+    public static final String LOG_INFO_EMOJI = "📊";
+    public static final String LOG_FIRE_EMOJI = "🔥";
 }

@@ -67,7 +67,7 @@ public class TMDBBulkLoaderService {
                     }
 
                     JsonNode results = response.path("results");
-                    if (results.size() == 0) {
+                    if (results.isEmpty()) {
                         log.debug("Página {} vacía, terminando carga", page);
                         break;
                     }
@@ -237,15 +237,24 @@ public class TMDBBulkLoaderService {
     }
 
     /**
-     * Cancela la carga en progreso (si es posible)
+     * Cancela la carga en progreso
      */
     public boolean cancelLoading() {
         if (loadingInProgress) {
             loadingInProgress = false;
-            log.info("🛑 Carga cancelada por el usuario");
+            currentStatus.completed = true;
+            currentStatus.endTime = LocalDateTime.now();
+            log.warn("⚠️ Carga cancelada por usuario");
             return true;
         }
         return false;
+    }
+
+    /**
+     * Obtiene el número total de películas en la base de datos
+     */
+    public long getMovieCount() {
+        return movieRepository.count();
     }
 
     // Clases de datos para el estado y resultado

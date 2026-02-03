@@ -90,7 +90,7 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Crea un token de confirmación de email
+     * Crea un token de confirmación de email con información adicional
      */
     public String createConfirmationToken(String username, long validityInMilliseconds) {
         Date now = new Date();
@@ -103,5 +103,139 @@ public class JwtTokenProvider {
                 .claim("typ", "confirmation")
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    /**
+     * Crea un token de confirmación con email incluido para mayor seguridad
+     */
+    public String createConfirmationToken(String username, long validityInMilliseconds, String email) {
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + validityInMilliseconds);
+
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .claim("typ", "confirmation")
+                .claim("email", email)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    /**
+     * Obtiene el email del token de confirmación
+     */
+    public String getEmailFromToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+            return claims.get("email", String.class);
+        } catch (JwtException | IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Verifica si un token es de confirmación
+     */
+    public boolean isConfirmationToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+            Object typ = claims.get("typ");
+            return "confirmation".equals(typ);
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Validación más estricta para tokens de confirmación
+     */
+    public boolean validateConfirmationToken(String token) {
+        try {
+            if (!validateToken(token)) {
+                return false;
+            }
+            return isConfirmationToken(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Crea un token de reseteo de contraseña
+     */
+    public String createPasswordResetToken(String username, String email, long validityInMilliseconds) {
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + validityInMilliseconds);
+
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .claim("typ", "password-reset")
+                .claim("email", email)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    /**
+     * Verifica si un token es de reseteo de contraseña
+     */
+    public boolean isPasswordResetToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+            Object typ = claims.get("typ");
+            return "password-reset".equals(typ);
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Obtiene toda la información de un token de forma segura
+     */
+    public TokenInfo getTokenInfo(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+
+            TokenInfo info = new TokenInfo();
+            info.username = claims.getSubject();
+            info.issuedAt = claims.getIssuedAt();
+            info.expiration = claims.getExpiration();
+            info.type = claims.get("typ", String.class);
+            info.email = claims.get("email", String.class);
+            info.roles = claims.get("roles", String.class);
+            info.valid = true;
+
+            return info;
+
+        } catch (JwtException | IllegalArgumentException e) {
+            TokenInfo info = new TokenInfo();
+            info.valid = false;
+            info.error = e.getMessage();
+            return info;
+        }
+    }
+
+    /**
+     * Clase para información del token
+     */
+    public static class TokenInfo {
+        public boolean valid;
+        public String username;
+        public String email;
+        public String roles;
+        public String type;
+        public Date issuedAt;
+        public Date expiration;
+        public String error;
+
+        public boolean isExpired() {
+            return expiration != null && expiration.before(new Date());
+        }
+
+        public long getTimeToExpiry() {
+            return expiration != null ? expiration.getTime() - System.currentTimeMillis() : 0;
+        }
     }
 }

@@ -35,10 +35,18 @@ public class TMDBClient {
         log.debug("Loading TMDB configuration (ensureConfigurationLoaded)");
         try {
             JsonNode cfg = webClient.get()
-                    .uri(uriBuilder -> uriBuilder.path("/configuration").build())
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/configuration");
+                        // Añadir API key como query param si no hay bearer token
+                        if ((bearerToken == null || bearerToken.isBlank()) && apiKey != null && !apiKey.isBlank()) {
+                            uriBuilder.queryParam("api_key", apiKey);
+                        }
+                        return uriBuilder.build();
+                    })
                     .headers(h -> {
-                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
-                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                        if (bearerToken != null && !bearerToken.isBlank()) {
+                            h.setBearerAuth(bearerToken);
+                        }
                     })
                     .retrieve()
                     .bodyToMono(JsonNode.class)
@@ -151,14 +159,22 @@ public class TMDBClient {
         log.debug("Getting TMDB top rated movies page {}", page);
         try {
             JsonNode resp = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/movie/top_rated")
-                            .queryParam("page", page)
-                            .queryParam("language", "es-ES")
-                            .build())
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/movie/top_rated")
+                                .queryParam("page", page)
+                                .queryParam("language", "es-ES");
+
+                        // Añadir API key como query param si no hay bearer token
+                        if ((bearerToken == null || bearerToken.isBlank()) && apiKey != null && !apiKey.isBlank()) {
+                            uriBuilder.queryParam("api_key", apiKey);
+                        }
+
+                        return uriBuilder.build();
+                    })
                     .headers(h -> {
-                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
-                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                        if (bearerToken != null && !bearerToken.isBlank()) {
+                            h.setBearerAuth(bearerToken);
+                        }
                     })
                     .retrieve()
                     .bodyToMono(JsonNode.class)
@@ -232,14 +248,22 @@ public class TMDBClient {
         log.debug("Searching TMDB for movie: {}", query);
         try {
             JsonNode resp = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/search/movie")
-                            .queryParam("query", query)
-                            .queryParam("language", "es-ES")
-                            .build())
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/search/movie")
+                                .queryParam("query", query)
+                                .queryParam("language", "es-ES");
+
+                        // Añadir API key como query param si no hay bearer token
+                        if ((bearerToken == null || bearerToken.isBlank()) && apiKey != null && !apiKey.isBlank()) {
+                            uriBuilder.queryParam("api_key", apiKey);
+                        }
+
+                        return uriBuilder.build();
+                    })
                     .headers(h -> {
-                        if (bearerToken != null && !bearerToken.isBlank()) h.setBearerAuth(bearerToken);
-                        else if (apiKey != null && !apiKey.isBlank()) h.set("X-Api-Key", apiKey);
+                        if (bearerToken != null && !bearerToken.isBlank()) {
+                            h.setBearerAuth(bearerToken);
+                        }
                     })
                     .retrieve()
                     .bodyToMono(JsonNode.class)

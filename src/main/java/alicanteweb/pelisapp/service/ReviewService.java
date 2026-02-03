@@ -29,7 +29,7 @@ public class ReviewService {
     private final ReviewLikeRepository reviewLikeRepository;
     private final UserRepository userRepository;
     private final MovieRepository movieRepository;
-    private final ModeratingAI moderatingAI;
+    private final ModerationService moderationService;
     private final UserService userService;
 
     @Transactional
@@ -39,20 +39,32 @@ public class ReviewService {
         User user = findUserById(userId);
         Movie movie = findMovieById(movieId);
 
-        // Validación de moderación
-        double aiScore = moderatingAI.analyzeText(text);
-        if (aiScore < AppConstants.AI_REJECTION_THRESHOLD) {
-            log.warn("Review rechazada por moderación para usuario ID: {} - Score: {}", userId, aiScore);
-            throw new IllegalArgumentException(AppConstants.ERROR_REVIEW_TOO_TOXIC);
-        }
-
+        // Crear reseña primero
         Review review = buildReview(user, movie, text, stars);
         Review savedReview = reviewRepository.save(review);
+
+        // Enviar a moderación asíncrona con Ollama
+        moderationService.moderateReviewAsync(savedReview)
+            .thenAccept(moderation -> {
+                if (moderation.getStatus() == alicanteweb.pelisapp.entity.CommentModeration.ModerationStatus.REJECTED) {
+                    log.warn("❌ Reseña rechazada por moderación IA - ID: {}, Usuario: {}",
+                            savedReview.getId(), user.getUsername());
+                    // Opcional: marcar la reseña como rechazada o eliminarla
+                } else {
+                    log.info("✅ Reseña aprobada o en revisión - ID: {}, Estado: {}",
+                            savedReview.getId(), moderation.getStatus());
+                }
+            })
+            .exceptionally(ex -> {
+                log.error("❌ Error en moderación asíncrona para reseña ID: {}: {}",
+                        savedReview.getId(), ex.getMessage());
+                return null;
+            });
 
         // Actualizar logros del usuario de forma asíncrona
         userService.onUserPostedReview(user.getId());
 
-        log.info("Nueva reseña creada - Usuario: {}, Película: {}, Estrellas: {}",
+        log.info("Nueva reseña creada - Usuario: {}, Película: {}, Estrellas: {}, enviada a moderación IA",
                 user.getUsername(), movie.getTitle(), stars);
 
         return savedReview;

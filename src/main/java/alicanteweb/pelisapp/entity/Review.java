@@ -46,5 +46,5 @@ public class Review {
     private Set<ReviewLike> likes = new HashSet<>();
 
     @OneToOne(mappedBy = "review", cascade = CascadeType.ALL)
-    private ComentaryModeration moderation;
+    private CommentModeration moderation;
 }
