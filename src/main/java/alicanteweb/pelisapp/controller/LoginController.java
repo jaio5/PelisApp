@@ -16,14 +16,17 @@ public class LoginController {
 
         if (error != null) {
             model.addAttribute("error", true);
+            System.out.println("[DEBUG] LoginController: error param detectado");
         }
         if (logout != null) {
             model.addAttribute("logout", true);
+            System.out.println("[DEBUG] LoginController: logout param detectado");
         }
         if (confirmed != null) {
             model.addAttribute("confirmed", true);
+            System.out.println("[DEBUG] LoginController: confirmed param detectado");
         }
-
+        System.out.println("[DEBUG] LoginController: Acceso a /login con params -> error=" + error + ", logout=" + logout + ", confirmed=" + confirmed);
         return "login";
     }
 

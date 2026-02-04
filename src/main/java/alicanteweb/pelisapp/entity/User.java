@@ -63,7 +63,7 @@ public class User {
     private Set<UsuarioArchivement> usuarioArchievements = new HashSet<>();
 
     // Roles (ManyToMany)
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "usuario_roles",
             joinColumns = @JoinColumn(name = "usuario_id", referencedColumnName = "id"),
             inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id"))

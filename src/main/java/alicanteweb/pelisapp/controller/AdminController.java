@@ -27,6 +27,19 @@ public class AdminController {
         return "admin/movies";
     }
 
+    @GetMapping
+    public String showAdminDashboard(Model model) {
+        // Datos básicos para el dashboard
+        long movieCount = movieRepository.count();
+        model.addAttribute("movieCount", movieCount);
+        return "admin/index";
+    }
+
+    @GetMapping("/")
+    public String showAdminDashboardWithSlash(Model model) {
+        return "redirect:/admin";
+    }
+
     @PostMapping("/load-popular")
     @ResponseBody
     public String loadPopularMovies(@RequestParam(defaultValue = "3") int pages) {

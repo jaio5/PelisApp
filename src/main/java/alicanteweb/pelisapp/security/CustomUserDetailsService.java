@@ -1,5 +1,6 @@
 package alicanteweb.pelisapp.security;
 
+import alicanteweb.pelisapp.constants.RoleConstants;
 import alicanteweb.pelisapp.entity.User;
 import alicanteweb.pelisapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +30,12 @@ public class CustomUserDetailsService implements UserDetailsService {
                 return new UsernameNotFoundException("Usuario no encontrado: " + username);
             });
 
-        // Verificar que el email esté confirmado
-        if (!user.isEmailConfirmed()) {
+        // Verificar confirmación de email (excepto para admins)
+        boolean isAdmin = user.getRoles().stream()
+            .anyMatch(role -> RoleConstants.ADMIN.equals(role.getName())
+                           || RoleConstants.SUPERADMIN.equals(role.getName()));
+
+        if (!user.isEmailConfirmed() && !isAdmin) {
             log.warn("User {} attempted login but email not confirmed", username);
             throw new UsernameNotFoundException("Cuenta no confirmada. Revisa tu email para confirmar tu cuenta.");
         }

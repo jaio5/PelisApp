@@ -4,9 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Primary;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -16,11 +14,11 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 /**
- * Servicio real de email que envía correos reales.
- * Se activa cuando app.email.enabled=true Y JavaMailSender está disponible
+ * Servicio real de email que envía correos reales con Gmail.
+ * Se activa cuando app.email.enabled=true
  */
 @Service("realEmailService")
-@Primary // Se convierte en el servicio principal cuando está habilitado
+@Primary
 @Slf4j
 @ConditionalOnProperty(name = "app.email.enabled", havingValue = "true")
 public class RealEmailService implements IEmailService {
@@ -39,33 +37,22 @@ public class RealEmailService implements IEmailService {
 
     @PostConstruct
     public void init() {
-        log.info("🔧 Inicializando RealEmailService...");
-        log.info("📧 Email origen: {}", fromEmail != null ? fromEmail : "❌ NO CONFIGURADO");
-        log.info("🌍 Base URL: {}", baseUrl);
-        log.info("📱 Nombre app: {}", appName);
-        log.info("📮 JavaMailSender: {}", mailSender != null ? "✅ CONFIGURADO" : "❌ NO CONFIGURADO");
-
         if (mailSender == null) {
-            log.error("❌ CRÍTICO: JavaMailSender no está disponible. Verifica la configuración de email.");
-        }
-
-        if (fromEmail == null || fromEmail.isEmpty()) {
-            log.error("❌ CRÍTICO: spring.mail.username no está configurado.");
+            log.warn("⚠️  JavaMailSender no está disponible. Verifica la configuración de email.");
         } else {
-            log.info("✅ RealEmailService inicializado correctamente");
+            log.info("✅ RealEmailService inicializado con Gmail: {}", fromEmail);
         }
     }
 
     @Override
     public void sendConfirmationEmail(String toEmail, String username, String confirmationToken) {
-        // Verificar que el servicio está configurado correctamente
         if (mailSender == null) {
-            log.error("❌ JavaMailSender no está configurado. Verifica las propiedades de email.");
-            throw new RuntimeException("JavaMailSender no configurado");
+            log.error("❌ JavaMailSender no está configurado. No se puede enviar email.");
+            throw new RuntimeException("Servicio de email no configurado");
         }
 
         if (fromEmail == null || fromEmail.isEmpty()) {
-            log.error("❌ spring.mail.username no está configurado. Configura EMAIL_USERNAME.");
+            log.error("❌ spring.mail.username no está configurado.");
             throw new RuntimeException("Email username no configurado");
         }
 
@@ -75,21 +62,15 @@ public class RealEmailService implements IEmailService {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
-            // Configurar email
             helper.setTo(toEmail);
             helper.setFrom(fromEmail);
             helper.setSubject("🎬 Confirma tu cuenta en " + appName);
 
-            // Crear URL de confirmación
             String confirmationUrl = baseUrl + "/confirm-account?token=" + confirmationToken;
-
-            // Crear contenido HTML del email
             String htmlContent = createConfirmationEmailHTML(username, confirmationUrl);
             helper.setText(htmlContent, true);
 
-            // Enviar email
             mailSender.send(mimeMessage);
-
             log.info("✅ Email de confirmación enviado exitosamente a: {}", toEmail);
 
         } catch (MessagingException e) {
@@ -97,20 +78,23 @@ public class RealEmailService implements IEmailService {
             throw new RuntimeException("Error enviando email de confirmación: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("❌ Error inesperado enviando email: {}", e.getMessage());
-            throw new RuntimeException("Error inesperado enviando email: " + e.getMessage(), e);
+            throw new RuntimeException("Error inesperado: " + e.getMessage(), e);
         }
     }
 
     @Override
     public void sendSimpleConfirmationEmail(String toEmail, String username, String confirmationToken) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(toEmail);
-            message.setFrom(fromEmail);
-            message.setSubject("🎬 Confirma tu cuenta en " + appName);
+            log.info("📧 Enviando email de confirmación simple a: {}", toEmail);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setFrom(fromEmail);
+            helper.setSubject("🎬 Confirma tu cuenta en " + appName);
 
             String confirmationUrl = baseUrl + "/confirm-account?token=" + confirmationToken;
-
             String textContent = String.format("""
                 ¡Hola %s!
                 
@@ -129,14 +113,13 @@ public class RealEmailService implements IEmailService {
                 El equipo de %s
                 """, username, appName, confirmationUrl, appName);
 
-            message.setText(textContent);
-
+            helper.setText(textContent, false);
             mailSender.send(message);
             log.info("✅ Email simple de confirmación enviado a: {}", toEmail);
 
         } catch (Exception e) {
-            log.error("❌ Error enviando email simple a {}: {}", toEmail, e.getMessage());
-            throw new RuntimeException("Error enviando email", e);
+            log.error("❌ Error enviando email simple: {}", e.getMessage());
+            throw new RuntimeException("Error enviando email: " + e.getMessage(), e);
         }
     }
 
@@ -146,136 +129,61 @@ public class RealEmailService implements IEmailService {
     private String createConfirmationEmailHTML(String username, String confirmationUrl) {
         return String.format("""
             <!DOCTYPE html>
-            <html lang="es">
+            <html>
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Confirma tu cuenta - %s</title>
-                <style>
-                    body {
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                        background: linear-gradient(135deg, #1e1e1e, #2c2c2c);
-                        margin: 0;
-                        padding: 20px;
-                        color: #ffffff;
-                    }
-                    .container {
-                        max-width: 600px;
-                        margin: 0 auto;
-                        background: rgba(44, 44, 44, 0.95);
-                        border-radius: 15px;
-                        overflow: hidden;
-                        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-                        border: 1px solid rgba(255, 107, 53, 0.3);
-                    }
-                    .header {
-                        background: linear-gradient(135deg, #ff6b35, #e55a30);
-                        text-align: center;
-                        padding: 40px 20px;
-                    }
-                    .logo {
-                        font-size: 2.5rem;
-                        font-weight: bold;
-                        margin-bottom: 10px;
-                    }
-                    .subtitle {
-                        font-size: 1.1rem;
-                        opacity: 0.9;
-                    }
-                    .content {
-                        padding: 40px 30px;
-                        text-align: center;
-                    }
-                    .welcome {
-                        font-size: 1.5rem;
-                        font-weight: bold;
-                        margin-bottom: 20px;
-                        color: #ff6b35;
-                    }
-                    .message {
-                        font-size: 1.1rem;
-                        line-height: 1.6;
-                        margin-bottom: 30px;
-                        color: #b3b3b3;
-                    }
-                    .confirm-button {
-                        display: inline-block;
-                        background: linear-gradient(135deg, #ff6b35, #e55a30);
-                        color: white !important;
-                        text-decoration: none;
-                        padding: 15px 40px;
-                        border-radius: 10px;
-                        font-weight: bold;
-                        font-size: 1.1rem;
-                        transition: all 0.3s ease;
-                        box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
-                    }
-                    .confirm-button:hover {
-                        transform: translateY(-2px);
-                        box-shadow: 0 12px 30px rgba(255, 107, 53, 0.4);
-                    }
-                    .footer {
-                        padding: 30px;
-                        text-align: center;
-                        border-top: 1px solid rgba(255, 255, 255, 0.1);
-                    }
-                    .footer-text {
-                        color: #888;
-                        font-size: 0.9rem;
-                        line-height: 1.5;
-                    }
-                    .url-fallback {
-                        background: rgba(0, 0, 0, 0.3);
-                        padding: 15px;
-                        border-radius: 8px;
-                        margin-top: 20px;
-                        font-family: monospace;
-                        word-break: break-all;
-                        font-size: 0.9rem;
-                        color: #ccc;
-                    }
-                </style>
+                <title>Confirma tu cuenta en %s</title>
             </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <div class="logo">🎬 %s</div>
-                        <div class="subtitle">Tu Red Social de Películas</div>
-                    </div>
-                    
-                    <div class="content">
-                        <div class="welcome">¡Hola %s!</div>
-                        
-                        <div class="message">
-                            Gracias por unirte a <strong>%s</strong>, la comunidad donde las películas cobran vida.<br><br>
-                            
-                            Para comenzar a valorar películas, escribir reseñas y conectar con otros cinéfilos,
-                            necesitas confirmar tu dirección de email.
-                        </div>
-                        
-                        <a href="%s" class="confirm-button">
-                            ✅ Confirmar mi Cuenta
-                        </a>
-                        
-                        <div class="url-fallback">
-                            <strong>Si el botón no funciona, copia y pega este enlace en tu navegador:</strong><br>
-                            <span style="color: #ff6b35;">%s</span>
-                        </div>
-                    </div>
-                    
-                    <div class="footer">
-                        <div class="footer-text">
-                            <strong>Este enlace es válido por 24 horas.</strong><br><br>
-                            
-                            Si no creaste esta cuenta, puedes ignorar este email de forma segura.<br><br>
-                            
-                            ¿Tienes problemas? Contacta con nuestro soporte.<br><br>
-                            
-                            Con amor cinéfilo,<br>
-                            <strong>El equipo de %s</strong> 🍿
-                        </div>
-                    </div>
-                </div>
+            <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%%">
+                    <tr>
+                        <td style="padding: 40px 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                                <tr>
+                                    <td style="padding: 40px; text-align: center; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; border-radius: 10px 10px 0 0;">
+                                        <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🎬 %s</h1>
+                                        <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Tu red social de películas</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 40px;">
+                                        <h2 style="color: #333; margin-top: 0;">¡Hola %s! 👋</h2>
+                                        <p style="color: #666; line-height: 1.6; margin: 20px 0;">¡Gracias por unirte a <strong>%s</strong>! Para completar tu registro y comenzar a descubrir películas increíbles, necesitamos confirmar tu dirección de correo electrónico.</p>
+                                        <div style="text-align: center; margin: 30px 0;">
+                                            <a href="%s" style="display: inline-block; background: linear-gradient(135deg, #ff6b35 0%%, #f7931e 100%%); color: white; text-decoration: none; padding: 15px 30px; border-radius: 25px; font-weight: bold; font-size: 16px; transition: transform 0.2s;">
+                                                ✅ Confirmar mi Cuenta
+                                            </a>
+                                        </div>
+                                        <p style="color: #666; line-height: 1.6;">Si el botón no funciona, también puedes copiar y pegar este enlace en tu navegador:</p>
+                                        <p style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; word-break: break-all; font-family: monospace; font-size: 12px; color: #666;">%s</p>
+                                        <div style="margin-top: 30px; padding: 20px; background-color: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+                                            <p style="margin: 0; color: #1976d2; font-weight: bold;">🔐 ¿Por qué confirmar tu email?</p>
+                                            <ul style="margin: 10px 0 0 0; color: #666;">
+                                                <li>🛡️ Protege tu cuenta contra accesos no autorizados</li>
+                                                <li>📧 Recibe notificaciones importantes sobre tu cuenta</li>
+                                                <li>🎬 Mantente al día con nuevas películas y reseñas</li>
+                                                <li>💌 Recupera tu cuenta si olvidas tu contraseña</li>
+                                            </ul>
+                                        </div>
+                                        <p style="color: #999; font-size: 14px; margin-top: 30px; text-align: center;">
+                                            Este enlace de confirmación expira en 24 horas.<br>
+                                            Si no creaste esta cuenta, puedes ignorar este email.
+                                        </p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 30px; text-align: center; background-color: #f8f9fa; border-radius: 0 0 10px 10px;">
+                                        <p style="margin: 0; color: #999; font-size: 14px;">
+                                            ¡Disfruta descubriendo y valorando películas!<br>
+                                            <strong>El equipo de %s</strong> 🎭
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
             </body>
             </html>
             """, appName, appName, username, appName, confirmationUrl, confirmationUrl, appName);

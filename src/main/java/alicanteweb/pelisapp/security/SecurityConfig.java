@@ -16,7 +16,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -60,7 +59,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> {
                 // Rutas públicas
                 auth.requestMatchers("/", "/login", "/register").permitAll();
-                auth.requestMatchers("/confirm-account/**", "/resend-confirmation").permitAll();
+                auth.requestMatchers("/confirm-account/**", "/resend-confirmation", "/request-confirmation").permitAll();
                 auth.requestMatchers("/api/auth/**").permitAll();
                 auth.requestMatchers("/css/**", "/js/**", "/images/**").permitAll();
                 auth.requestMatchers("/error", "/favicon.ico").permitAll();
@@ -123,7 +122,7 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12); // Strength factor aumentado para mayor seguridad
+        return new BCryptPasswordEncoder(10); // Strength factor estándar para compatibilidad
     }
 
     @Bean
