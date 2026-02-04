@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle != null ? pageTitle + ' - PelisApp' : 'PelisApp - Tu crítico de películas personal'}">PelisApp</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+
+    <!-- Custom page styles -->
+    <th:block th:fragment="styles"></th:block>
+
+    <meta name="description" th:content="${pageDescription ?: 'PelisApp - Descubre, reseña y comparte tu opinión sobre películas. La comunidad de críticos de cine más activa.'}">
+    <meta name="keywords" content="películas, reseñas, críticas, cine, comunidad">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" th:content="${pageTitle ?: 'PelisApp'}">
+    <meta property="og:description" th:content="${pageDescription ?: 'Tu crítico de películas personal'}">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" th:content="${pageTitle ?: 'PelisApp'}">
+    <meta property="twitter:description" th:content="${pageDescription ?: 'Tu crítico de películas personal'}">
+</head>
+<body>
+    <!-- Navigation -->
+    <th:block th:insert="~{fragments/navbar :: navbar}"></th:block>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Breadcrumb (optional) -->
+        <nav th:if="${breadcrumbs}" aria-label="breadcrumb" class="bg-light py-2">
+            <div class="container">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item">
+                        <a th:href="@{/}" class="text-decoration-none">
+                            <i class="fas fa-home"></i> Inicio
+                        </a>
+                    </li>
+                    <li th:each="breadcrumb : ${breadcrumbs}"
+                        th:class="'breadcrumb-item' + (${breadcrumb.active} ? ' active' : '')"
+                        th:aria-current="${breadcrumb.active} ? 'page' : null">
+                        <a th:if="!${breadcrumb.active}"
+                           th:href="${breadcrumb.url}"
+                           th:text="${breadcrumb.title}"
+                           class="text-decoration-none"></a>
+                        <span th:if="${breadcrumb.active}" th:text="${breadcrumb.title}"></span>
+                    </li>
+                </ol>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        <div class="container-fluid">
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                <span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div th:if="${warning}" class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <span th:text="${warning}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div th:if="${info}" class="alert alert-info alert-dismissible fade show mt-3" role="alert">
+                <i class="fas fa-info-circle me-2"></i>
+                <span th:text="${info}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+
+        <!-- Page Content -->
+        <div th:replace="${content}">
+            <!-- Content will be replaced here -->
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <th:block th:insert="~{fragments/footer :: footer}"></th:block>
+
+    <!-- Loading Spinner (Global) -->
+    <div id="loadingSpinner" class="loading-spinner d-none">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Global JavaScript -->
+    <script th:src="@{/js/app.js}"></script>
+
+    <!-- Page specific scripts -->
+    <th:block th:fragment="scripts"></th:block>
+
+    <script>
+        // Global JavaScript functions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto dismiss alerts after 5 seconds
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+                alerts.forEach(function(alert) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                });
+            }, 5000);
+
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Initialize popovers
+            const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+            popoverTriggerList.map(function (popoverTriggerEl) {
+                return new bootstrap.Popover(popoverTriggerEl);
+            });
+        });
+
+        // Global loading functions
+        function showLoading() {
+            document.getElementById('loadingSpinner').classList.remove('d-none');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSpinner').classList.add('d-none');
+        }
+
+        // Global AJAX setup
+        $.ajaxSetup({
+            beforeSend: function() {
+                showLoading();
+            },
+            complete: function() {
+                hideLoading();
+            },
+            error: function(xhr, status, error) {
+                console.error('Error AJAX:', error);
+                // Handle global errors here
+            }
+        });
+    </script>
+</body>
+</html>

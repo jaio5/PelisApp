@@ -1,0 +1,248 @@
+<!-- Navigation Fragment -->
+<nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm"
+     xmlns:th="http://www.thymeleaf.org"
+     xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+    <div class="container-fluid">
+        <!-- Brand -->
+        <a class="navbar-brand fw-bold" href="/">
+            <i class="fas fa-film me-2 text-warning"></i>
+            PelisApp
+        </a>
+
+        <!-- Mobile Toggle -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Navigation Links -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <!-- Left Side Navigation -->
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">
+                        <i class="fas fa-home me-1"></i>Inicio
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="/peliculas">
+                        <i class="fas fa-film me-1"></i>Películas
+                    </a>
+                </li>
+
+                <!-- User Menu (Authenticated) -->
+                <li class="nav-item dropdown" sec:authorize="isAuthenticated() and !hasRole('ADMIN')">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i>Mi Cuenta
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/usuario/dashboard">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a></li>
+                        <li><a class="dropdown-item" href="/usuario/profile">
+                            <i class="fas fa-user-circle me-2"></i>Mi Perfil
+                        </a></li>
+                        <li><a class="dropdown-item" href="/usuario/reviews">
+                            <i class="fas fa-star me-2"></i>Mis Reseñas
+                        </a></li>
+                        <li><a class="dropdown-item" href="/usuario/favorites">
+                            <i class="fas fa-heart me-2"></i>Favoritas
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/usuario/edit-profile">
+                            <i class="fas fa-cog me-2"></i>Configuración
+                        </a></li>
+                    </ul>
+                </li>
+
+                <!-- Admin Menu -->
+                <li class="nav-item dropdown" sec:authorize="hasRole('ADMIN')">
+                    <a class="nav-link dropdown-toggle text-warning" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-shield-alt me-1"></i>Administración
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><h6 class="dropdown-header">
+                            <i class="fas fa-tachometer-alt me-2"></i>Panel Principal
+                        </h6></li>
+                        <li><a class="dropdown-item" href="/admin">
+                            <i class="fas fa-home me-2"></i>Dashboard Principal
+                        </a></li>
+                        <li><a class="dropdown-item" href="/admin/dashboard">
+                            <i class="fas fa-chart-pie me-2"></i>Dashboard Detallado
+                        </a></li>
+                        <li><a class="dropdown-item" href="/admin/reports">
+                            <i class="fas fa-chart-bar me-2"></i>Reportes y Análisis
+                        </a></li>
+
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">
+                            <i class="fas fa-users me-2"></i>Gestión de Usuarios
+                        </h6></li>
+                        <li><a class="dropdown-item" href="/admin/users">
+                            <i class="fas fa-users me-2"></i>Gestionar Usuarios
+                        </a></li>
+                        <li><a class="dropdown-item" href="/admin/moderation">
+                            <i class="fas fa-shield-alt me-2"></i>Moderación
+                        </a></li>
+
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">
+                            <i class="fas fa-film me-2"></i>Gestión de Contenido
+                        </h6></li>
+                        <li><a class="dropdown-item" href="/admin/movies">
+                            <i class="fas fa-film me-2"></i>Gestionar Películas
+                        </a></li>
+                        <li><a class="dropdown-item" href="/admin/bulk-loader">
+                            <i class="fas fa-download me-2"></i>Cargar desde TMDB
+                        </a></li>
+
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">
+                            <i class="fas fa-cogs me-2"></i>Configuración
+                        </h6></li>
+                        <li><a class="dropdown-item" href="/admin/system-config">
+                            <i class="fas fa-server me-2"></i>Configuración Sistema
+                        </a></li>
+                        <li><a class="dropdown-item" href="/admin/email-config">
+                            <i class="fas fa-envelope me-2"></i>Configuración Email
+                        </a></li>
+                        <li><a class="dropdown-item" href="/email-test">
+                            <i class="fas fa-vial me-2"></i>Test de Email
+                        </a></li>
+                    </ul>
+                </li>
+            </ul>
+
+            <!-- Right Side Navigation -->
+            <ul class="navbar-nav">
+                <!-- Search (visible to all) -->
+                <li class="nav-item">
+                    <form class="d-flex me-2" action="/peliculas" method="get">
+                        <div class="input-group">
+                            <label for="navbarSearch" class="visually-hidden">Buscar películas</label>
+                            <input class="form-control form-control-sm" type="search"
+                                   id="navbarSearch" name="search" placeholder="Buscar películas..."
+                                   style="width: 200px;">
+                            <button class="btn btn-outline-warning btn-sm" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </li>
+
+                <!-- Guest Links -->
+                <li class="nav-item" sec:authorize="!isAuthenticated()">
+                    <a class="nav-link" href="/login">
+                        <i class="fas fa-sign-in-alt me-1"></i>Iniciar Sesión
+                    </a>
+                </li>
+
+                <li class="nav-item" sec:authorize="!isAuthenticated()">
+                    <a class="nav-link btn btn-warning text-dark ms-2 px-3" href="/register">
+                        <i class="fas fa-user-plus me-1"></i>Registrarse
+                    </a>
+                </li>
+
+                <!-- Authenticated User Menu -->
+                <li class="nav-item dropdown" sec:authorize="isAuthenticated()">
+                    <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown">
+                        <img src="https://via.placeholder.com/32x32?text=U"
+                             class="rounded-circle me-1" width="24" height="24" alt="Avatar">
+                        <span sec:authentication="name">Usuario</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">
+                            <i class="fas fa-user-circle me-2"></i>
+                            <span sec:authentication="name">Usuario</span>
+                        </h6></li>
+
+                        <!-- Regular User Options -->
+                        <li sec:authorize="!hasRole('ADMIN')"><a class="dropdown-item" href="/usuario/dashboard">
+                            <i class="fas fa-tachometer-alt me-2"></i>Mi Dashboard
+                        </a></li>
+                        <li sec:authorize="!hasRole('ADMIN')"><a class="dropdown-item" href="/usuario/profile">
+                            <i class="fas fa-user me-2"></i>Ver Perfil
+                        </a></li>
+                        <li sec:authorize="!hasRole('ADMIN')"><a class="dropdown-item" href="/usuario/edit-profile">
+                            <i class="fas fa-edit me-2"></i>Editar Perfil
+                        </a></li>
+                        <li sec:authorize="!hasRole('ADMIN')"><a class="dropdown-item" href="/usuario/reviews">
+                            <i class="fas fa-star me-2"></i>Mis Reseñas
+                        </a></li>
+
+                        <!-- Admin Options -->
+                        <li sec:authorize="hasRole('ADMIN')"><a class="dropdown-item text-warning" href="/admin">
+                            <i class="fas fa-shield-alt me-2"></i>Panel Admin
+                        </a></li>
+                        <li sec:authorize="hasRole('ADMIN')"><a class="dropdown-item" href="/usuario/profile">
+                            <i class="fas fa-user me-2"></i>Mi Perfil
+                        </a></li>
+
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/usuario/settings">
+                            <i class="fas fa-cog me-2"></i>Configuración
+                        </a></li>
+
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form action="/logout" method="post" class="dropdown-item-text">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                <button type="submit" class="dropdown-item w-100 text-start border-0 bg-transparent">
+                                    <i class="fas fa-sign-out-alt me-2 text-danger"></i>
+                                    <span class="text-danger">Cerrar Sesión</span>
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- Notifications (for authenticated users) -->
+                <li class="nav-item dropdown" sec:authorize="isAuthenticated()">
+                    <a class="nav-link position-relative" href="#" id="notificationsDropdown"
+                       role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-bell"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                              style="font-size: 0.6rem;">
+                            3
+                        </span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" style="width: 300px;">
+                        <li><h6 class="dropdown-header">
+                            <i class="fas fa-bell me-2"></i>Notificaciones
+                        </h6></li>
+
+                        <li><a class="dropdown-item" href="#">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-star text-warning"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-2">
+                                    <small class="fw-bold">Nueva reseña</small><br>
+                                    <small class="text-muted">Alguien comentó en Avatar</small>
+                                </div>
+                            </div>
+                        </a></li>
+
+                        <li><a class="dropdown-item" href="#">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-user-plus text-success"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-2">
+                                    <small class="fw-bold">Nuevo seguidor</small><br>
+                                    <small class="text-muted">moviefan123 te sigue</small>
+                                </div>
+                            </div>
+                        </a></li>
+
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-center small" href="/notifications">
+                            Ver todas las notificaciones
+                        </a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

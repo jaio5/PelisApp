@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración de Email - Admin Panel</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+
+    <style>
+        .admin-header {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+        }
+        .config-card {
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #28a745; }
+        .status-warning { background-color: #ffc107; }
+        .status-error { background-color: #dc3545; }
+        .status-unknown { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <th:block th:insert="~{fragments/navbar :: navbar}"></th:block>
+
+    <!-- Admin Header -->
+    <div class="admin-header py-4">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="h3 mb-2">
+                        <i class="fas fa-envelope me-2"></i>Configuración de Email
+                    </h1>
+                    <p class="mb-0 opacity-75">Gestiona y prueba el sistema de correo electrónico</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0 justify-content-md-end">
+                            <li class="breadcrumb-item"><a href="/admin" class="text-white-50">Admin</a></li>
+                            <li class="breadcrumb-item active text-white">Email</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <!-- Status Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card config-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="status-indicator" id="emailStatus"></div>
+                            <div>
+                                <h6 class="card-title mb-0">Estado del Email</h6>
+                                <small class="text-muted" id="emailStatusText">Verificando...</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card config-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="status-indicator" id="smtpStatus"></div>
+                            <div>
+                                <h6 class="card-title mb-0">Conexión SMTP</h6>
+                                <small class="text-muted" id="smtpStatusText">No verificado</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card config-card h-100">
+                    <div class="card-body">
+                        <h6 class="card-title">Emails Enviados Hoy</h6>
+                        <h3 class="text-primary mb-0" id="emailsSentToday">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card config-card h-100">
+                    <div class="card-body">
+                        <h6 class="card-title">Última Prueba</h6>
+                        <small class="text-muted" id="lastTestTime">Nunca</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Configuración Actual -->
+            <div class="col-lg-6 mb-4">
+                <div class="card config-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-cog me-2"></i>Configuración Actual
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Servidor SMTP</label>
+                            <input type="text" class="form-control" value="smtp.gmail.com" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Puerto</label>
+                            <input type="text" class="form-control" value="587" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email Usuario</label>
+                            <input type="text" class="form-control" value="javierbarcelo2106@gmail.com" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Contraseña</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" value="Iirlmnye322*" readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility()">
+                                    <i class="fas fa-eye" id="passwordToggleIcon"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Para Gmail, usa una contraseña de aplicación de 16 caracteres
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Importante
+                            </h6>
+                            Si tienes problemas de autenticación:
+                            <ol class="mb-0 mt-2">
+                                <li>Ve a <a href="https://myaccount.google.com/security" target="_blank">Google Account Security</a></li>
+                                <li>Activa la verificación en 2 pasos</li>
+                                <li>Crea una "Contraseña de aplicación" para PelisApp</li>
+                                <li>Usa esa contraseña de 16 caracteres</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test de Email -->
+            <div class="col-lg-6 mb-4">
+                <div class="card config-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-paper-plane me-2"></i>Pruebas de Email
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Test de Conexión -->
+                        <div class="mb-4">
+                            <h6>Test de Conexión SMTP</h6>
+                            <p class="text-muted small">Verifica la conectividad básica con Gmail</p>
+                            <button type="button" class="btn btn-primary" onclick="testSmtpConnection()">
+                                <i class="fas fa-plug me-2"></i>Probar Conexión
+                            </button>
+                        </div>
+
+                        <hr>
+
+                        <!-- Test de Email -->
+                        <div class="mb-4">
+                            <h6>Enviar Email de Prueba</h6>
+                            <p class="text-muted small">Envía un email de confirmación de prueba</p>
+
+                            <div class="mb-3">
+                                <label for="testEmail" class="form-label">Email destino</label>
+                                <input type="email" class="form-control" id="testEmail"
+                                       value="javierbarcelo2106@gmail.com"
+                                       placeholder="email@ejemplo.com">
+                            </div>
+
+                            <button type="button" class="btn btn-success" onclick="sendTestEmail()">
+                                <i class="fas fa-envelope me-2"></i>Enviar Email de Prueba
+                            </button>
+                        </div>
+
+                        <hr>
+
+                        <!-- Resultados -->
+                        <div>
+                            <h6>Resultados de Pruebas</h6>
+                            <div class="test-result bg-dark text-light p-3 rounded" id="testResults">
+                                <div class="text-muted">Los resultados de las pruebas aparecerán aquí...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información Adicional -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card config-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Información del Sistema
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6>URLs de Confirmación</h6>
+                                <p class="small">Base URL: <code>http://localhost:8080</code></p>
+                                <p class="small">Confirmación: <code>/confirm-account?token=...</code></p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Templates de Email</h6>
+                                <p class="small">HTML: ✅ Disponible</p>
+                                <p class="small">Texto plano: ✅ Disponible</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Logs</h6>
+                                <p class="small">Verifica la consola del servidor para logs detallados</p>
+                                <p class="small">Nivel: <code>INFO</code></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <th:block th:insert="~{fragments/footer :: footer}"></th:block>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        let testResults = $('#testResults');
+
+        $(document).ready(function() {
+            checkEmailStatus();
+            loadTestHistory();
+        });
+
+        function addTestResult(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const iconClass = type === 'success' ? 'fa-check text-success' :
+                            type === 'error' ? 'fa-times text-danger' :
+                            type === 'warning' ? 'fa-exclamation-triangle text-warning' :
+                            'fa-info text-info';
+
+            const resultHtml = `
+                <div class="test-result-item mb-2">
+                    <span class="text-muted">[${timestamp}]</span>
+                    <i class="fas ${iconClass} me-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+
+            if (testResults.find('.text-muted').length === 1 && testResults.find('.text-muted').text().includes('aparecerán aquí')) {
+                testResults.empty();
+            }
+
+            testResults.append(resultHtml);
+            testResults.scrollTop(testResults[0].scrollHeight);
+        }
+
+        function checkEmailStatus() {
+            addTestResult('Verificando configuración de email...', 'info');
+
+            $.get('/api/email-test/config')
+                .done(function(response) {
+                    $('#emailStatus').removeClass().addClass('status-indicator status-success');
+                    $('#emailStatusText').text('Configurado');
+                    addTestResult('✅ Configuración de email verificada', 'success');
+                })
+                .fail(function(xhr) {
+                    $('#emailStatus').removeClass().addClass('status-indicator status-error');
+                    $('#emailStatusText').text('Error');
+                    addTestResult('❌ Error verificando configuración: ' + (xhr.responseJSON?.error || 'Error desconocido'), 'error');
+                });
+        }
+
+        function testSmtpConnection() {
+            addTestResult('🧪 Iniciando test de conexión SMTP...', 'info');
+            $('#smtpStatus').removeClass().addClass('status-indicator status-warning');
+            $('#smtpStatusText').text('Probando...');
+
+            $.post('/api/email-test/test-connection')
+                .done(function(response) {
+                    $('#smtpStatus').removeClass().addClass('status-indicator status-success');
+                    $('#smtpStatusText').text('Conectado');
+                    addTestResult('✅ Conexión SMTP exitosa', 'success');
+                    if (response.message) {
+                        addTestResult(response.message, 'success');
+                    }
+                    updateLastTestTime();
+                })
+                .fail(function(xhr) {
+                    $('#smtpStatus').removeClass().addClass('status-indicator status-error');
+                    $('#smtpStatusText').text('Error');
+                    const error = xhr.responseJSON;
+                    addTestResult('❌ Error de conexión SMTP: ' + (error?.error || 'Error desconocido'), 'error');
+                    if (error?.suggestion) {
+                        addTestResult('💡 Sugerencia: ' + error.suggestion, 'warning');
+                    }
+                });
+        }
+
+        function sendTestEmail() {
+            const email = $('#testEmail').val();
+            if (!email) {
+                addTestResult('❌ Por favor, introduce un email válido', 'error');
+                return;
+            }
+
+            addTestResult(`📧 Enviando email de prueba a: ${email}...`, 'info');
+
+            $.post('/api/email-test/send-test', { toEmail: email })
+                .done(function(response) {
+                    addTestResult('✅ Email de prueba enviado exitosamente', 'success');
+                    if (response.message) {
+                        addTestResult(response.message, 'success');
+                    }
+                    if (response.token) {
+                        addTestResult(`🔑 Token de confirmación: ${response.token.substring(0, 20)}...`, 'info');
+                    }
+                    updateLastTestTime();
+                    incrementEmailCounter();
+                })
+                .fail(function(xhr) {
+                    const error = xhr.responseJSON;
+                    addTestResult('❌ Error enviando email: ' + (error?.error || 'Error desconocido'), 'error');
+                    if (error?.help) {
+                        addTestResult('💡 Ayuda: ' + error.help, 'warning');
+                    }
+                });
+        }
+
+        function togglePasswordVisibility() {
+            const passwordField = $('input[type="password"]');
+            const icon = $('#passwordToggleIcon');
+
+            if (passwordField.attr('type') === 'password') {
+                passwordField.attr('type', 'text');
+                icon.removeClass('fa-eye').addClass('fa-eye-slash');
+            } else {
+                passwordField.attr('type', 'password');
+                icon.removeClass('fa-eye-slash').addClass('fa-eye');
+            }
+        }
+
+        function updateLastTestTime() {
+            const now = new Date().toLocaleString();
+            $('#lastTestTime').text(now);
+            localStorage.setItem('lastEmailTest', now);
+        }
+
+        function incrementEmailCounter() {
+            const today = new Date().toDateString();
+            const countKey = 'emailCount_' + today;
+            const currentCount = parseInt(localStorage.getItem(countKey) || '0');
+            const newCount = currentCount + 1;
+            localStorage.setItem(countKey, newCount.toString());
+            $('#emailsSentToday').text(newCount);
+        }
+
+        function loadTestHistory() {
+            const lastTest = localStorage.getItem('lastEmailTest');
+            if (lastTest) {
+                $('#lastTestTime').text(lastTest);
+            }
+
+            const today = new Date().toDateString();
+            const countKey = 'emailCount_' + today;
+            const todayCount = localStorage.getItem(countKey) || '0';
+            $('#emailsSentToday').text(todayCount);
+        }
+    </script>
+</body>
+</html>

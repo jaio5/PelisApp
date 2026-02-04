@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escribir Reseña - PelisApp</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+
+    <style>
+        .review-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 0;
+        }
+        .star-rating {
+            font-size: 2rem;
+            color: #ddd;
+            cursor: pointer;
+        }
+        .star-rating .star {
+            transition: color 0.3s ease;
+        }
+        .star-rating .star.active,
+        .star-rating .star:hover {
+            color: #ffc107;
+        }
+        .movie-info-card {
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .review-form {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <th:block th:insert="~{fragments/navbar :: navbar}"></th:block>
+
+    <!-- Hero Section -->
+    <section class="review-hero">
+        <div class="container">
+            <div class="text-center">
+                <h1 class="display-5 fw-bold mb-3">
+                    <i class="fas fa-star me-3"></i>Escribe tu Reseña
+                </h1>
+                <p class="lead">Comparte tu opinión y ayuda a otros cinéfilos</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <!-- Movie Info Card -->
+            <div class="col-lg-4 mb-4" th:if="${movie != null}">
+                <div class="card movie-info-card h-100">
+                    <img th:src="${movie.posterPath != null ? movie.posterPath : 'https://via.placeholder.com/300x450?text=Sin+Imagen'}"
+                         class="card-img-top" alt="Poster" style="height: 400px; object-fit: cover;">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold" th:text="${movie.title}">Título de la Película</h5>
+                        <p class="text-muted mb-2" th:text="${movie.releaseDate}">2024</p>
+                        <p class="card-text small"
+                           th:text="${movie.description != null ? (movie.description.length() > 100 ? movie.description.substring(0, 100) + '...' : movie.description) : 'Sin descripción'}">
+                           Descripción...
+                        </p>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-warning">
+                                <i class="fas fa-star me-1"></i>
+                                <span th:text="${movie.averageRating != null ? movie.averageRating : '0.0'}">0.0</span>
+                            </small>
+                            <small class="text-muted">
+                                <span th:text="${movie.reviewCount != null ? movie.reviewCount : 0}">0</span> reseñas
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Form -->
+            <div class="col-lg-8">
+                <div class="review-form p-4">
+                    <h3 class="mb-4">
+                        <i class="fas fa-edit me-2 text-primary"></i>
+                        Tu Opinión
+                    </h3>
+
+                    <!-- Review Form -->
+                    <form th:action="@{/reviews}" method="post">
+                        <!-- Hidden Movie ID -->
+                        <input type="hidden" name="movieId" th:value="${movie != null ? movie.id : param.movieId}">
+
+                        <!-- Rating Section -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-star me-2 text-warning"></i>
+                                Puntuación *
+                            </label>
+                            <div class="star-rating" id="starRating">
+                                <span class="star" data-rating="1"><i class="fas fa-star"></i></span>
+                                <span class="star" data-rating="2"><i class="fas fa-star"></i></span>
+                                <span class="star" data-rating="3"><i class="fas fa-star"></i></span>
+                                <span class="star" data-rating="4"><i class="fas fa-star"></i></span>
+                                <span class="star" data-rating="5"><i class="fas fa-star"></i></span>
+                            </div>
+                            <input type="hidden" name="stars" id="ratingValue" value="0">
+                            <div class="form-text">Haz clic en las estrellas para puntuar</div>
+                            <div class="invalid-feedback" th:if="${starsError}" th:text="${starsError}"></div>
+                        </div>
+
+                        <!-- Review Text -->
+                        <div class="mb-4">
+                            <label for="reviewText" class="form-label fw-bold">
+                                <i class="fas fa-comment me-2 text-info"></i>
+                                Tu Reseña *
+                            </label>
+                            <textarea class="form-control" id="reviewText" name="text" rows="6"
+                                      placeholder="Escribe tu opinión sobre la película... ¿Qué te gustó? ¿Qué no te convenció? ¿La recomendarías?"
+                                      th:text="${reviewText != null ? reviewText : ''}"
+                                      maxlength="2000" required></textarea>
+                            <div class="form-text">
+                                <span id="charCount">0</span>/2000 caracteres
+                            </div>
+                            <div class="invalid-feedback" th:if="${textError}" th:text="${textError}"></div>
+                        </div>
+
+                        <!-- Review Guidelines -->
+                        <div class="alert alert-info mb-4">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Consejos para una buena reseña:
+                            </h6>
+                            <ul class="mb-0 small">
+                                <li>Evita spoilers importantes de la trama</li>
+                                <li>Sé constructivo y respetuoso</li>
+                                <li>Explica por qué te gustó o no te gustó</li>
+                                <li>Menciona aspectos como actuación, dirección, música, efectos</li>
+                                <li>Ayuda a otros usuarios con tu opinión honest</li>
+                            </ul>
+                        </div>
+
+                        <!-- Error Messages -->
+                        <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a th:href="@{/pelicula/{id}(id=${movie != null ? movie.id : param.movieId})}"
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancelar
+                            </a>
+
+                            <div>
+                                <button type="button" class="btn btn-outline-primary me-2" onclick="previewReview()">
+                                    <i class="fas fa-eye me-2"></i>Vista Previa
+                                </button>
+                                <button type="submit" class="btn btn-success" id="submitBtn" disabled>
+                                    <i class="fas fa-check me-2"></i>Publicar Reseña
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="previewModalLabel">
+                        <i class="fas fa-eye me-2"></i>Vista Previa de tu Reseña
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="https://via.placeholder.com/50x50?text=U"
+                                     class="rounded-circle me-3" width="50" height="50" alt="Tu Avatar">
+                                <div>
+                                    <h6 class="mb-0" sec:authentication="name">Tu Usuario</h6>
+                                    <div class="text-warning" id="previewRating">
+                                        <!-- Stars will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="card-text" id="previewText">Texto de la reseña aparecerá aquí...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-success" onclick="submitReview()">
+                        <i class="fas fa-check me-2"></i>Publicar Reseña
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <th:block th:insert="~{fragments/footer :: footer}"></th:block>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        let currentRating = 0;
+        let $stars, $charCount, $submitBtn, $reviewText, $ratingValue;
+
+        $(document).ready(function() {
+            // Cache jQuery selectors
+            $stars = $('.star');
+            $charCount = $('#charCount');
+            $submitBtn = $('#submitBtn');
+            $reviewText = $('#reviewText');
+            $ratingValue = $('#ratingValue');
+
+            // Star rating functionality
+            $stars.on('click', function() {
+                currentRating = $(this).data('rating');
+                updateStars(currentRating);
+                $ratingValue.val(currentRating);
+                validateForm();
+            });
+
+            $stars.on('mouseenter', function() {
+                const hoverRating = $(this).data('rating');
+                updateStars(hoverRating);
+            });
+
+            $('.star-rating').on('mouseleave', function() {
+                updateStars(currentRating);
+            });
+
+            // Character counter
+            $reviewText.on('input', function() {
+                const length = $(this).val().length;
+                $charCount.text(length);
+
+                if (length > 2000) {
+                    $charCount.addClass('text-danger');
+                } else {
+                    $charCount.removeClass('text-danger');
+                }
+
+                validateForm();
+            });
+
+            // Initial setup
+            validateForm();
+            updateCharCount();
+            loadDraft();
+            startAutoSave();
+        });
+
+        function updateStars(rating) {
+            $stars.each(function(index) {
+                if (index < rating) {
+                    $(this).addClass('active');
+                } else {
+                    $(this).removeClass('active');
+                }
+            });
+        }
+
+        function updateCharCount() {
+            const length = $reviewText.val().length;
+            $charCount.text(length);
+        }
+
+        function validateForm() {
+            const rating = parseInt($ratingValue.val()) || 0;
+            const text = $reviewText.val().trim();
+            const isValid = rating > 0 && text.length >= 10 && text.length <= 2000;
+
+            $submitBtn.prop('disabled', !isValid);
+
+            if (isValid) {
+                $submitBtn.removeClass('btn-secondary').addClass('btn-success');
+            } else {
+                $submitBtn.removeClass('btn-success').addClass('btn-secondary');
+            }
+        }
+
+        function previewReview() {
+            const rating = parseInt($ratingValue.val()) || 0;
+            const text = $reviewText.val();
+
+            // Update preview rating
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                if (i <= rating) {
+                    starsHtml += '<i class="fas fa-star"></i> ';
+                } else {
+                    starsHtml += '<i class="far fa-star"></i> ';
+                }
+            }
+            $('#previewRating').html(starsHtml);
+
+            // Update preview text
+            $('#previewText').text(text || 'Aún no has escrito tu reseña...');
+
+            // Show modal
+            new bootstrap.Modal(document.getElementById('previewModal')).show();
+        }
+
+        function submitReview() {
+            // Close modal and submit form
+            bootstrap.Modal.getInstance(document.getElementById('previewModal')).hide();
+            setTimeout(() => {
+                $('form').submit();
+            }, 300);
+        }
+
+        // Auto-save functionality
+        let autoSaveInterval;
+        function startAutoSave() {
+            autoSaveInterval = setInterval(() => {
+                const formData = {
+                    movieId: $('input[name="movieId"]').val(),
+                    rating: $ratingValue.val(),
+                    text: $reviewText.val()
+                };
+
+                // Save to localStorage as draft
+                localStorage.setItem('reviewDraft_' + formData.movieId, JSON.stringify(formData));
+            }, 30000); // Auto-save every 30 seconds
+        }
+
+        function loadDraft() {
+            const movieId = $('input[name="movieId"]').val();
+            const draft = localStorage.getItem('reviewDraft_' + movieId);
+
+            if (draft) {
+                try {
+                    const draftData = JSON.parse(draft);
+                    if (draftData.rating) {
+                        currentRating = parseInt(draftData.rating);
+                        updateStars(currentRating);
+                        $ratingValue.val(currentRating);
+                    }
+                    if (draftData.text) {
+                        $reviewText.val(draftData.text);
+                        updateCharCount();
+                    }
+                    validateForm();
+                } catch (e) {
+                    console.log('Error loading draft:', e);
+                }
+            }
+        }
+
+        // Clear draft on successful submission
+        $('form').on('submit', function() {
+            const movieId = $('input[name="movieId"]').val();
+            localStorage.removeItem('reviewDraft_' + movieId);
+            clearInterval(autoSaveInterval);
+        });
+    </script>
+</body>
+</html>

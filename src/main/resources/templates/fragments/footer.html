@@ -1,0 +1,185 @@
+<!-- Footer Fragment -->
+<footer th:fragment="footer" class="bg-dark text-light mt-5"
+        xmlns:th="http://www.thymeleaf.org"
+        xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+    <!-- Main Footer -->
+    <div class="container py-5">
+        <div class="row">
+            <!-- About Section -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <h5 class="text-warning">
+                    <i class="fas fa-film me-2"></i>PelisApp
+                </h5>
+                <p class="text-light-50">
+                    Tu plataforma de críticas cinematográficas donde puedes descubrir, reseñar y compartir
+                    tu opinión sobre las mejores películas.
+                </p>
+                <div class="d-flex">
+                    <a href="#" class="text-light me-3" data-bs-toggle="tooltip" title="Facebook">
+                        <i class="fab fa-facebook fa-lg"></i>
+                    </a>
+                    <a href="#" class="text-light me-3" data-bs-toggle="tooltip" title="Twitter">
+                        <i class="fab fa-twitter fa-lg"></i>
+                    </a>
+                    <a href="#" class="text-light me-3" data-bs-toggle="tooltip" title="Instagram">
+                        <i class="fab fa-instagram fa-lg"></i>
+                    </a>
+                    <a href="#" class="text-light" data-bs-toggle="tooltip" title="YouTube">
+                        <i class="fab fa-youtube fa-lg"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6 class="text-warning">Enlaces Rápidos</h6>
+                <ul class="list-unstyled">
+                    <li><a href="/" class="text-light-50 text-decoration-none">Inicio</a></li>
+                    <li><a href="/peliculas" class="text-light-50 text-decoration-none">Películas</a></li>
+                    <li><a href="/reviews" class="text-light-50 text-decoration-none">Reseñas</a></li>
+                    <li sec:authorize="isAuthenticated()">
+                        <a href="/usuario/dashboard" class="text-light-50 text-decoration-none">Mi Dashboard</a>
+                    </li>
+                    <li sec:authorize="!isAuthenticated()">
+                        <a href="/login" class="text-light-50 text-decoration-none">Iniciar Sesión</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Categories -->
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6 class="text-warning">Categorías</h6>
+                <ul class="list-unstyled">
+                    <li><a href="/peliculas?category=accion" class="text-light-50 text-decoration-none">Acción</a></li>
+                    <li><a href="/peliculas?category=drama" class="text-light-50 text-decoration-none">Drama</a></li>
+                    <li><a href="/peliculas?category=comedia" class="text-light-50 text-decoration-none">Comedia</a></li>
+                    <li><a href="/peliculas?category=terror" class="text-light-50 text-decoration-none">Terror</a></li>
+                    <li><a href="/peliculas?category=ciencia-ficcion" class="text-light-50 text-decoration-none">Ciencia Ficción</a></li>
+                </ul>
+            </div>
+
+            <!-- Support -->
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6 class="text-warning">Soporte</h6>
+                <ul class="list-unstyled">
+                    <li><a href="/static/help" class="text-light-50 text-decoration-none">Ayuda</a></li>
+                    <li><a href="/static/terms" class="text-light-50 text-decoration-none">Términos</a></li>
+                    <li><a href="/static/privacy" class="text-light-50 text-decoration-none">Privacidad</a></li>
+                    <li><a href="/static/about" class="text-light-50 text-decoration-none">Acerca de</a></li>
+                    <li><a href="mailto:soporte@pelisapp.com" class="text-light-50 text-decoration-none">Contacto</a></li>
+                </ul>
+            </div>
+
+            <!-- Newsletter -->
+            <div class="col-lg-2 col-md-6 mb-4" sec:authorize="isAuthenticated()">
+                <h6 class="text-warning">Estadísticas</h6>
+                <ul class="list-unstyled small text-light-50">
+                    <li><i class="fas fa-users me-2"></i><span id="totalUsers">-</span> usuarios</li>
+                    <li><i class="fas fa-film me-2"></i><span id="totalMovies">-</span> películas</li>
+                    <li><i class="fas fa-star me-2"></i><span id="totalReviews">-</span> reseñas</li>
+                    <li><i class="fas fa-clock me-2"></i>Actualizado hoy</li>
+                </ul>
+            </div>
+        </div>
+
+        <hr class="my-4 border-secondary">
+
+        <!-- Bottom Footer -->
+        <div class="row align-items-center">
+            <div class="col-lg-6 col-md-8">
+                <p class="text-light-50 mb-0">
+                    &copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span> PelisApp.
+                    Todos los derechos reservados.
+                    <br class="d-md-none">
+                    Hecho con <i class="fas fa-heart text-danger"></i> para los amantes del cine.
+                </p>
+            </div>
+
+            <div class="col-lg-6 col-md-4 text-md-end">
+                <div class="d-flex justify-content-md-end justify-content-start align-items-center">
+                    <small class="text-light-50 me-3">Versión 1.0.0</small>
+
+                    <!-- Theme Toggle -->
+                    <button type="button" class="btn btn-outline-light btn-sm me-2"
+                            id="themeToggle" data-bs-toggle="tooltip" title="Cambiar tema">
+                        <i class="fas fa-moon"></i>
+                    </button>
+
+                    <!-- Language Toggle -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle"
+                                type="button" id="languageDropdown" data-bs-toggle="dropdown">
+                            <i class="fas fa-globe me-1"></i>ES
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="?lang=es">
+                                <img src="https://flagcdn.com/16x12/es.png" alt="Spanish" class="me-2">Español
+                            </a></li>
+                            <li><a class="dropdown-item" href="?lang=en">
+                                <img src="https://flagcdn.com/16x12/us.png" alt="English" class="me-2">English
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back to Top Button -->
+    <button type="button" class="btn btn-warning position-fixed bottom-0 end-0 m-3 rounded-circle"
+            id="backToTopBtn" style="z-index: 1050; width: 50px; height: 50px; display: none;">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+</footer>
+
+<!-- Footer Scripts -->
+<script>
+    // Back to top functionality
+    window.addEventListener('scroll', function() {
+        const backToTopBtn = document.getElementById('backToTopBtn');
+        if (window.pageYOffset > 300) {
+            backToTopBtn.style.display = 'block';
+        } else {
+            backToTopBtn.style.display = 'none';
+        }
+    });
+
+    document.getElementById('backToTopBtn')?.addEventListener('click', function() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Theme toggle functionality
+    document.getElementById('themeToggle')?.addEventListener('click', function() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+
+        const icon = this.querySelector('i');
+        icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    });
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            const icon = themeToggle.querySelector('i');
+            icon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+    }
+
+    // Load footer statistics
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('totalUsers').textContent = data.totalUsers || '0';
+            document.getElementById('totalMovies').textContent = data.totalMovies || '0';
+            document.getElementById('totalReviews').textContent = data.totalReviews || '0';
+        })
+        .catch(() => {
+            // Silently fail - statistics are not critical
+        });
+</script>

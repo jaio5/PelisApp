@@ -43,7 +43,7 @@ public class EmailConfig {
         log.info("  📧 Host: {}", host);
         log.info("  🔌 Puerto: {}", port);
         log.info("  👤 Usuario: {}", username != null ? username : "❌ NO CONFIGURADO");
-        log.info("  🔐 Contraseña: {}", password != null && !password.isEmpty() ? "✅ CONFIGURADA" : "❌ NO CONFIGURADA");
+        log.info("  🔐 Contraseña: {}", password != null && !password.isEmpty() ? "✅ CONFIGURADA (" + password.length() + " caracteres)" : "❌ NO CONFIGURADA");
         log.info("  🔒 SMTP Auth: {}", smtpAuth);
         log.info("  🔐 StartTLS: {}", starttlsEnabled);
 
@@ -59,6 +59,21 @@ public class EmailConfig {
             log.error("   📋 2. Activa verificación en 2 pasos");
             log.error("   📋 3. En 'Contraseñas de aplicaciones', crea una nueva para 'PelisApp'");
             log.error("   📋 4. Usa esa contraseña de 16 caracteres en spring.mail.password");
+        } else {
+            // Validar formato de contraseña de aplicación de Gmail
+            if (password.length() == 16 && password.matches("[a-z]+")) {
+                log.info("✅ Formato de contraseña parece ser contraseña de aplicación de Gmail");
+            } else if (password.length() != 16) {
+                log.warn("⚠️  La contraseña tiene {} caracteres. Las contraseñas de aplicación de Gmail tienen exactamente 16.", password.length());
+                log.warn("   💡 Si usas Gmail, asegúrate de usar una contraseña de aplicación");
+            }
+        }
+
+        // Test de configuración básica
+        if (username != null && password != null && !password.isEmpty()) {
+            log.info("🚀 Configuración básica completa. Email habilitado para envío.");
+        } else {
+            log.error("🚫 Configuración incompleta. Email DESHABILITADO.");
         }
     }
 

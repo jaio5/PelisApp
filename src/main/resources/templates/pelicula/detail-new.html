@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pelicula != null ? pelicula.title + ' - PelisApp' : 'Película - PelisApp'}">Película - PelisApp</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+
+    <style>
+        .movie-hero {
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)),
+                        url('https://images.unsplash.com/photo-1489599511069-5c12073bbda8?q=80&w=1920') center/cover;
+            color: white;
+            padding: 100px 0;
+        }
+        .movie-poster {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .rating-large {
+            font-size: 2rem;
+            color: #ffc107;
+        }
+        .btn-action {
+            margin: 0.25rem;
+            padding: 0.75rem 1.5rem;
+        }
+        .review-card {
+            transition: transform 0.3s ease;
+        }
+        .review-card:hover {
+            transform: translateY(-2px);
+        }
+        .user-avatar-small {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <th:block th:insert="~{fragments/navbar :: navbar}"></th:block>
+
+    <!-- Movie Hero Section -->
+    <section class="movie-hero" th:if="${pelicula != null}">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-4 text-center mb-4 mb-lg-0">
+                    <img th:src="${pelicula.posterPath != null ? pelicula.posterPath : (pelicula.posterLocalPath != null ? '/images' + pelicula.posterLocalPath : 'https://via.placeholder.com/300x450?text=Sin+Imagen')}"
+                         class="movie-poster" th:alt="${pelicula.title}">
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="movie-info">
+                        <!-- Title and Year -->
+                        <h1 class="display-4 fw-bold mb-3" th:text="${pelicula.title}">Título de la Película</h1>
+
+                        <!-- Rating and Year -->
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="rating-large me-4">
+                                <span th:text="${avg != null ? #numbers.formatDecimal(avg, 1, 'POINT') : '0.0'}">0.0</span>
+                                <i class="fas fa-star ms-2"></i>
+                            </div>
+                            <div>
+                                <span class="badge bg-warning text-dark fs-6 me-3" th:text="${pelicula.releaseDate}">2024</span>
+                                <span class="text-light" th:if="${pelicula.runtimeMinutes}" th:text="${pelicula.runtimeMinutes + ' minutos'}"></span>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <p class="lead mb-4" th:text="${pelicula.description != null ? pelicula.description : 'Sin descripción disponible'}">
+                            Descripción de la película...
+                        </p>
+
+                        <!-- Action Buttons -->
+                        <div class="movie-actions" sec:authorize="isAuthenticated()">
+                            <button type="button" class="btn btn-warning btn-action" id="addToWatchlist"
+                                    th:data-movie-id="${pelicula.id}">
+                                <i class="fas fa-bookmark me-2"></i>Agregar a Mi Lista
+                            </button>
+                            <button type="button" class="btn btn-danger btn-action" id="toggleFavorite"
+                                    th:data-movie-id="${pelicula.id}">
+                                <i class="far fa-heart me-2"></i>Favorito
+                            </button>
+                            <a th:href="@{/reviews/create(movieId=${pelicula.id})}" class="btn btn-success btn-action">
+                                <i class="fas fa-star me-2"></i>Escribir Reseña
+                            </a>
+                        </div>
+
+                        <!-- Guest Actions -->
+                        <div class="movie-actions" sec:authorize="!isAuthenticated()">
+                            <a href="/login" class="btn btn-warning btn-action">
+                                <i class="fas fa-sign-in-alt me-2"></i>Inicia Sesión para Reseñar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Movie Details -->
+    <div class="container py-5" th:if="${pelicula != null}">
+        <!-- Statistics Cards -->
+        <div class="row mb-5">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h3 class="text-primary" th:text="${resenas != null ? #lists.size(resenas) : 0}">0</h3>
+                        <p class="card-text text-muted">Reseñas</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h3 class="text-success" th:text="${avg != null ? #numbers.formatDecimal(avg, 1, 'POINT') : '0.0'}">0.0</h3>
+                        <p class="card-text text-muted">Puntuación Media</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h3 class="text-warning" th:text="${viewCount != null ? viewCount : 0}">0</h3>
+                        <p class="card-text text-muted">Visualizaciones</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h3 class="text-info" th:text="${favoriteCount != null ? favoriteCount : 0}">0</h3>
+                        <p class="card-text text-muted">Favoritos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reviews Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="h3">
+                        <i class="fas fa-star me-2 text-warning"></i>
+                        Reseñas de la Comunidad
+                    </h2>
+                    <a th:href="@{/reviews/create(movieId=${pelicula.id})}" class="btn btn-outline-primary" sec:authorize="isAuthenticated()">
+                        <i class="fas fa-plus me-2"></i>Escribir Reseña
+                    </a>
+                </div>
+
+                <!-- Reviews List -->
+                <div class="row" th:if="${resenas != null and !#lists.isEmpty(resenas)}">
+                    <div class="col-lg-6 mb-4" th:each="review : ${resenas}">
+                        <div class="card review-card h-100">
+                            <div class="card-body">
+                                <!-- Review Header -->
+                                <div class="d-flex align-items-center mb-3">
+                                    <img src="https://via.placeholder.com/50x50?text=U"
+                                         class="user-avatar-small rounded-circle me-3" alt="Avatar">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0" th:text="${review.user != null ? review.user.username : 'Usuario Anónimo'}">Usuario</h6>
+                                        <div class="d-flex align-items-center">
+                                            <!-- Stars -->
+                                            <div class="text-warning me-2">
+                                                <i class="fas fa-star" th:each="star : ${#numbers.sequence(1, 5)}"
+                                                   th:class="${star <= review.stars} ? 'fas fa-star' : 'far fa-star'"></i>
+                                            </div>
+                                            <small class="text-muted" th:text="${review.createdDate != null ? #temporals.format(review.createdDate, 'dd/MM/yyyy') : 'Sin fecha'}">
+                                                Fecha
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Review Content -->
+                                <p class="card-text" th:text="${review.text}">Texto de la reseña...</p>
+
+                                <!-- Review Actions -->
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="review-actions">
+                                        <button type="button" class="btn btn-sm btn-outline-success"
+                                                th:data-review-id="${review.id}">
+                                            <i class="fas fa-thumbs-up me-1"></i>
+                                            <span th:text="${review.likeCount != null ? review.likeCount : 0}">0</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- Edit/Delete for review author -->
+                                    <div class="review-owner-actions"
+                                         th:if="${#authentication != null and review.user != null and #authentication.name == review.user.username}">
+                                        <a th:href="@{/reviews/{id}/edit(id=${review.id})}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                th:onclick="|deleteReview(${review.id})|">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Reviews Message -->
+                <div class="text-center py-5" th:if="${resenas == null or #lists.isEmpty(resenas)}">
+                    <i class="fas fa-star fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">Aún no hay reseñas</h4>
+                    <p class="text-muted">¡Sé el primero en compartir tu opinión sobre esta película!</p>
+                    <a th:href="@{/reviews/create(movieId=${pelicula.id})}" class="btn btn-primary" sec:authorize="isAuthenticated()">
+                        <i class="fas fa-star me-2"></i>Escribir Primera Reseña
+                    </a>
+                    <a href="/login" class="btn btn-primary" sec:authorize="!isAuthenticated()">
+                        <i class="fas fa-sign-in-alt me-2"></i>Inicia Sesión para Reseñar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div class="container py-5" th:if="${pelicula == null}">
+        <div class="text-center">
+            <i class="fas fa-film fa-4x text-muted mb-3"></i>
+            <h2 class="text-muted">Película no encontrada</h2>
+            <p class="text-muted">Lo sentimos, no pudimos encontrar la película que buscas.</p>
+            <a th:href="@{/peliculas}" class="btn btn-primary">
+                <i class="fas fa-arrow-left me-2"></i>Volver a Películas
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <th:block th:insert="~{fragments/footer :: footer}"></th:block>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Watchlist functionality
+            $('#addToWatchlist').on('click', function() {
+                const movieId = $(this).data('movie-id');
+                toggleWatchlist(movieId);
+            });
+
+            // Favorite functionality
+            $('#toggleFavorite').on('click', function() {
+                const movieId = $(this).data('movie-id');
+                toggleFavorite(movieId);
+            });
+
+            // Review like functionality
+            $('.btn-outline-success[data-review-id]').on('click', function() {
+                const reviewId = $(this).data('review-id');
+                toggleReviewLike(reviewId);
+            });
+        });
+
+        function toggleWatchlist(movieId) {
+            // Implementation for watchlist toggle
+            console.log('Toggle watchlist for movie:', movieId);
+        }
+
+        function toggleFavorite(movieId) {
+            // Implementation for favorite toggle
+            console.log('Toggle favorite for movie:', movieId);
+        }
+
+        function toggleReviewLike(reviewId) {
+            // Implementation for review like toggle
+            console.log('Toggle like for review:', reviewId);
+        }
+
+        function deleteReview(reviewId) {
+            if (confirm('¿Estás seguro de eliminar esta reseña?')) {
+                // Implementation for delete review
+                console.log('Delete review:', reviewId);
+            }
+        }
+    </script>
+</body>
+</html>

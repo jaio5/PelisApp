@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes y Análisis - Admin Panel</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+
+    <style>
+        .admin-header {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+        }
+        .report-card {
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            height: 100%;
+        }
+        .report-card:hover {
+            transform: translateY(-3px);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .metric-card {
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .metric-label {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+        .trend-up {
+            color: #28a745;
+        }
+        .trend-down {
+            color: #dc3545;
+        }
+        .trend-stable {
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <th:block th:insert="~{fragments/navbar :: navbar}"></th:block>
+
+    <!-- Admin Header -->
+    <div class="admin-header py-4">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="h3 mb-2">
+                        <i class="fas fa-chart-bar me-2"></i>Reportes y Análisis
+                    </h1>
+                    <p class="mb-0 opacity-75">Analiza el rendimiento y uso de la plataforma</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <!-- Date Range Selector -->
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="dateRange" id="range7d" autocomplete="off" checked>
+                        <label class="btn btn-outline-light btn-sm" for="range7d">7 días</label>
+
+                        <input type="radio" class="btn-check" name="dateRange" id="range30d" autocomplete="off">
+                        <label class="btn btn-outline-light btn-sm" for="range30d">30 días</label>
+
+                        <input type="radio" class="btn-check" name="dateRange" id="range90d" autocomplete="off">
+                        <label class="btn btn-outline-light btn-sm" for="range90d">90 días</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <!-- Key Metrics Row -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="metric-card bg-primary text-white">
+                    <div class="metric-value" id="totalUsersMetric">1,247</div>
+                    <div class="metric-label">Total Usuarios</div>
+                    <small class="trend-up">
+                        <i class="fas fa-arrow-up me-1"></i>+12% vs mes anterior
+                    </small>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="metric-card bg-success text-white">
+                    <div class="metric-value" id="activeUsersMetric">892</div>
+                    <div class="metric-label">Usuarios Activos</div>
+                    <small class="text-light">
+                        <i class="fas fa-minus me-1"></i>+2% vs mes anterior
+                    </small>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="metric-card bg-warning text-dark">
+                    <div class="metric-value" id="totalMoviesMetric">3,456</div>
+                    <div class="metric-label">Total Películas</div>
+                    <small class="trend-up">
+                        <i class="fas fa-arrow-up me-1"></i>+156 esta semana
+                    </small>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="metric-card bg-info text-white">
+                    <div class="metric-value" id="totalReviewsMetric">8,923</div>
+                    <div class="metric-label">Total Reseñas</div>
+                    <small class="text-light">
+                        <i class="fas fa-arrow-up me-1"></i>+45 hoy
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <!-- User Growth Chart -->
+            <div class="col-lg-6 mb-4">
+                <div class="card report-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-users me-2 text-primary"></i>Crecimiento de Usuarios
+                        </h5>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="userChartType" id="userDaily" autocomplete="off" checked>
+                            <label class="btn btn-outline-secondary" for="userDaily">Diario</label>
+
+                            <input type="radio" class="btn-check" name="userChartType" id="userWeekly" autocomplete="off">
+                            <label class="btn btn-outline-secondary" for="userWeekly">Semanal</label>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="userGrowthChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Chart -->
+            <div class="col-lg-6 mb-4">
+                <div class="card report-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-line me-2 text-success"></i>Actividad de la Plataforma
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Analytics Row -->
+        <div class="row mb-4">
+            <!-- Top Movies -->
+            <div class="col-lg-4 mb-4">
+                <div class="card report-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-trophy me-2 text-warning"></i>Películas Más Populares
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush" id="topMoviesList">
+                            <!-- Dynamic content -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Distribution -->
+            <div class="col-lg-4 mb-4">
+                <div class="card report-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-pie-chart me-2 text-info"></i>Distribución de Usuarios
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="userDistributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Analytics -->
+            <div class="col-lg-4 mb-4">
+                <div class="card report-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-star me-2 text-warning"></i>Análisis de Reseñas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="reviewAnalyticsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Tables Row -->
+        <div class="row">
+            <!-- Recent Activity Table -->
+            <div class="col-lg-8 mb-4">
+                <div class="card report-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-clock me-2"></i>Actividad Reciente Detallada
+                        </h5>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportActivityData()">
+                            <i class="fas fa-download me-1"></i>Exportar
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Usuario</th>
+                                        <th>Acción</th>
+                                        <th>Detalles</th>
+                                        <th>IP</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activityTableBody">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Performance -->
+            <div class="col-lg-4 mb-4">
+                <div class="card report-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-tachometer-alt me-2"></i>Rendimiento del Sistema
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="performance-metrics">
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span>Tiempo de Respuesta</span>
+                                    <span class="text-success">125ms</span>
+                                </div>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar bg-success" style="width: 85%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span>Uso de CPU</span>
+                                    <span class="text-warning">45%</span>
+                                </div>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar bg-warning" style="width: 45%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span>Uso de Memoria</span>
+                                    <span class="text-info">62%</span>
+                                </div>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar bg-info" style="width: 62%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span>Conexiones DB</span>
+                                    <span class="text-primary">8/20</span>
+                                </div>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar bg-primary" style="width: 40%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-3">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshPerformanceMetrics()">
+                                <i class="fas fa-sync-alt me-1"></i>Actualizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <th:block th:insert="~{fragments/footer :: footer}"></th:block>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        let userGrowthChart, activityChart, userDistributionChart, reviewAnalyticsChart;
+
+        $(document).ready(function() {
+            initializeCharts();
+            loadTopMovies();
+            loadRecentActivity();
+            setupEventHandlers();
+        });
+
+        function initializeCharts() {
+            // User Growth Chart
+            const userGrowthCtx = document.getElementById('userGrowthChart').getContext('2d');
+            userGrowthChart = new Chart(userGrowthCtx, {
+                type: 'line',
+                data: {
+                    labels: ['1 Feb', '2 Feb', '3 Feb', '4 Feb', '5 Feb', '6 Feb', '7 Feb'],
+                    datasets: [{
+                        label: 'Nuevos Usuarios',
+                        data: [12, 19, 8, 15, 25, 32, 18],
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // Activity Chart
+            const activityCtx = document.getElementById('activityChart').getContext('2d');
+            activityChart = new Chart(activityCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+                    datasets: [
+                        {
+                            label: 'Reseñas',
+                            data: [65, 59, 80, 81, 56, 95, 40],
+                            backgroundColor: 'rgba(255, 193, 7, 0.8)'
+                        },
+                        {
+                            label: 'Registros',
+                            data: [28, 48, 40, 19, 86, 27, 60],
+                            backgroundColor: 'rgba(40, 167, 69, 0.8)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // User Distribution Chart
+            const userDistCtx = document.getElementById('userDistributionChart').getContext('2d');
+            userDistributionChart = new Chart(userDistCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Usuarios Activos', 'Usuarios Inactivos', 'Usuarios Nuevos'],
+                    datasets: [{
+                        data: [892, 285, 70],
+                        backgroundColor: [
+                            'rgba(40, 167, 69, 0.8)',
+                            'rgba(108, 117, 125, 0.8)',
+                            'rgba(0, 123, 255, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // Review Analytics Chart
+            const reviewCtx = document.getElementById('reviewAnalyticsChart').getContext('2d');
+            reviewAnalyticsChart = new Chart(reviewCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['1★', '2★', '3★', '4★', '5★'],
+                    datasets: [{
+                        label: 'Distribución de Puntuaciones',
+                        data: [45, 123, 456, 892, 234],
+                        borderColor: 'rgba(255, 193, 7, 1)',
+                        backgroundColor: 'rgba(255, 193, 7, 0.2)',
+                        pointBackgroundColor: 'rgba(255, 193, 7, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        r: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function loadTopMovies() {
+            const topMovies = [
+                { title: 'Avatar: El Camino del Agua', reviews: 145, rating: 4.2 },
+                { title: 'Top Gun: Maverick', reviews: 132, rating: 4.5 },
+                { title: 'Black Panther: Wakanda Forever', reviews: 98, rating: 3.8 },
+                { title: 'Stranger Things 4', reviews: 87, rating: 4.1 },
+                { title: 'The Batman', reviews: 76, rating: 4.0 }
+            ];
+
+            const listHtml = topMovies.map((movie, index) => `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge bg-primary me-2">${index + 1}</span>
+                        <strong>${movie.title}</strong>
+                        <br>
+                        <small class="text-muted">${movie.reviews} reseñas</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-warning">${movie.rating} ★</span>
+                    </div>
+                </div>
+            `).join('');
+
+            $('#topMoviesList').html(listHtml);
+        }
+
+        function loadRecentActivity() {
+            const activities = [
+                { time: '14:25', user: 'usuario123', action: 'Registro', details: 'Nueva cuenta creada', ip: '192.168.1.100' },
+                { time: '14:20', user: 'moviefan456', action: 'Reseña', details: 'Avatar: El Camino del Agua', ip: '192.168.1.101' },
+                { time: '14:15', user: 'critico789', action: 'Login', details: 'Sesión iniciada', ip: '192.168.1.102' },
+                { time: '14:10', user: 'admin', action: 'Moderación', details: 'Reseña aprobada', ip: '192.168.1.103' },
+                { time: '14:05', user: 'newuser321', action: 'Registro', details: 'Email confirmado', ip: '192.168.1.104' }
+            ];
+
+            const tableHtml = activities.map(activity => `
+                <tr>
+                    <td>${activity.time}</td>
+                    <td>${activity.user}</td>
+                    <td>
+                        <span class="badge ${getActionBadgeClass(activity.action)}">${activity.action}</span>
+                    </td>
+                    <td>${activity.details}</td>
+                    <td><code>${activity.ip}</code></td>
+                </tr>
+            `).join('');
+
+            $('#activityTableBody').html(tableHtml);
+        }
+
+        function getActionBadgeClass(action) {
+            const classes = {
+                'Registro': 'bg-success',
+                'Reseña': 'bg-primary',
+                'Login': 'bg-info',
+                'Moderación': 'bg-warning',
+                'Error': 'bg-danger'
+            };
+            return classes[action] || 'bg-secondary';
+        }
+
+        function setupEventHandlers() {
+            // Date range changes
+            $('input[name="dateRange"]').on('change', function() {
+                const range = $(this).attr('id');
+                updateChartsForDateRange(range);
+            });
+
+            // Chart type toggles
+            $('input[name="userChartType"]').on('change', function() {
+                const type = $(this).attr('id');
+                updateUserChart(type);
+            });
+        }
+
+        function updateChartsForDateRange(range) {
+            // Update all charts based on date range
+            console.log('Updating charts for range:', range);
+
+            // Mock data updates
+            if (range === 'range30d') {
+                userGrowthChart.data.labels = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'];
+                userGrowthChart.data.datasets[0].data = [45, 62, 38, 71];
+            } else if (range === 'range90d') {
+                userGrowthChart.data.labels = ['Mes 1', 'Mes 2', 'Mes 3'];
+                userGrowthChart.data.datasets[0].data = [156, 189, 245];
+            } else {
+                userGrowthChart.data.labels = ['1 Feb', '2 Feb', '3 Feb', '4 Feb', '5 Feb', '6 Feb', '7 Feb'];
+                userGrowthChart.data.datasets[0].data = [12, 19, 8, 15, 25, 32, 18];
+            }
+
+            userGrowthChart.update();
+        }
+
+        function updateUserChart(type) {
+            if (type === 'userWeekly') {
+                userGrowthChart.data.labels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
+                userGrowthChart.data.datasets[0].data = [45, 62, 38, 71];
+            } else {
+                userGrowthChart.data.labels = ['1 Feb', '2 Feb', '3 Feb', '4 Feb', '5 Feb', '6 Feb', '7 Feb'];
+                userGrowthChart.data.datasets[0].data = [12, 19, 8, 15, 25, 32, 18];
+            }
+            userGrowthChart.update();
+        }
+
+        function exportActivityData() {
+            // Mock export functionality
+            const csvContent = "data:text/csv;charset=utf-8," +
+                "Timestamp,Usuario,Acción,Detalles,IP\n" +
+                "14:25,usuario123,Registro,Nueva cuenta creada,192.168.1.100\n" +
+                "14:20,moviefan456,Reseña,Avatar: El Camino del Agua,192.168.1.101\n";
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "activity_report.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function refreshPerformanceMetrics() {
+            // Mock refresh with random values
+            $('.performance-metrics .progress-bar').each(function() {
+                const randomValue = Math.floor(Math.random() * 100);
+                $(this).css('width', randomValue + '%');
+                $(this).closest('.mb-3').find('span:last').text(randomValue + '%');
+            });
+        }
+    </script>
+</body>
+</html>

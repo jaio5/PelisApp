@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Dashboard - PelisApp</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+
+    <style>
+        .stat-card {
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .activity-item {
+            border-left: 3px solid #ffc107;
+            padding-left: 15px;
+        }
+        .movie-poster {
+            width: 60px;
+            height: 90px;
+            object-fit: cover;
+        }
+        .rating-stars {
+            color: #ffc107;
+        }
+        .achievement-badge {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .movie-card {
+            transition: transform 0.3s ease;
+        }
+
+        .movie-card:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <th:block th:insert="~{fragments/navbar :: navbar}"></th:block>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <!-- Welcome Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-2">
+                            <i class="fas fa-tachometer-alt text-primary me-2"></i>
+                            ¡Bienvenido/a, <span sec:authentication="name" class="text-primary">Usuario</span>!
+                        </h1>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-calendar me-1"></i>
+                            Último acceso: <span th:text="${lastLoginDate ?: 'Primera vez'}">Hoy</span>
+                        </p>
+                    </div>
+                    <div class="text-end">
+                        <img src="https://via.placeholder.com/80x80?text=U"
+                             class="rounded-circle border border-primary"
+                             width="80" height="80" alt="Avatar">
+                        <div class="mt-2">
+                            <small class="badge bg-success">
+                                <i class="fas fa-crown me-1"></i>
+                                Nivel <span th:text="${userLevel ?: 1}">1</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stat-card bg-primary text-white h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="card-title h2 mb-0" th:text="${totalReviews ?: 0}">0</h4>
+                                <p class="card-text">Reseñas Escritas</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-star fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <small>
+                                <i class="fas fa-arrow-up me-1"></i>
+                                <span th:text="${reviewsThisMonth ?: 0}">0</span> este mes
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stat-card bg-success text-white h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="card-title h2 mb-0" th:text="${moviesWatched ?: 0}">0</h4>
+                                <p class="card-text">Películas Vistas</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-film fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <small>
+                                <i class="fas fa-clock me-1"></i>
+                                <span th:text="${hoursWatched ?: 0}">0</span> horas totales
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stat-card bg-warning text-dark h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="card-title h2 mb-0" th:text="${followers ?: 0}">0</h4>
+                                <p class="card-text">Seguidores</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-users fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <small>
+                                <i class="fas fa-user-plus me-1"></i>
+                                <span th:text="${newFollowersThisWeek ?: 0}">0</span> esta semana
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stat-card bg-info text-white h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="card-title h2 mb-0" th:text="${averageRating ?: '0.0'}">0.0</h4>
+                                <p class="card-text">Puntuación Media</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="rating-stars">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="far fa-star"></i>
+                                <i class="far fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Recent Activity -->
+            <div class="col-lg-8 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-clock me-2 text-primary"></i>
+                            Actividad Reciente
+                        </h5>
+                        <a href="/usuario/activity" class="btn btn-outline-primary btn-sm">Ver Todo</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="activity-timeline">
+                            <!-- Activity Item -->
+                            <div class="activity-item mb-3 pb-3 border-bottom" th:each="activity : ${recentActivity}">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0">
+                                        <img th:src="${activity.moviePoster ?: 'https://via.placeholder.com/60x90'}"
+                                             class="movie-poster rounded" alt="Poster">
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="mb-1" th:text="${activity.title ?: 'Actividad reciente'}">Título de actividad</h6>
+                                            <small class="text-muted" th:text="${activity.timeAgo ?: 'Hace 2 horas'}">Hace 2 horas</small>
+                                        </div>
+                                        <p class="text-muted mb-1" th:text="${activity.description ?: 'Descripción de la actividad'}">
+                                            Has reseñado "Avatar: El Camino del Agua"
+                                        </p>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rating-stars me-2" th:if="${activity.rating}">
+                                                <i th:each="star : ${#numbers.sequence(1, 5)}"
+                                                   th:class="${star <= activity.rating} ? 'fas fa-star' : 'far fa-star'"></i>
+                                            </div>
+                                            <small class="text-success" th:text="${activity.points ? '+' + activity.points + ' pts' : ''}">+15 pts</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Default items if no activity -->
+                            <div th:if="${#lists.isEmpty(recentActivity)}">
+                                <div class="text-center py-4">
+                                    <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">¡Aún no tienes actividad reciente!</p>
+                                    <a href="/peliculas" class="btn btn-primary">
+                                        <i class="fas fa-search me-2"></i>Explorar Películas
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions & Achievements -->
+            <div class="col-lg-4">
+                <!-- Quick Actions -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-bolt me-2 text-warning"></i>
+                            Acciones Rápidas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="/reviews/create" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Nueva Reseña
+                            </a>
+                            <a href="/peliculas/search" class="btn btn-outline-primary">
+                                <i class="fas fa-search me-2"></i>Buscar Películas
+                            </a>
+                            <a href="/usuario/watchlist" class="btn btn-outline-success">
+                                <i class="fas fa-bookmark me-2"></i>Mi Lista
+                            </a>
+                            <a href="/usuario/recommendations" class="btn btn-outline-info">
+                                <i class="fas fa-thumbs-up me-2"></i>Recomendaciones
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Achievements -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-trophy me-2 text-warning"></i>
+                            Logros
+                        </h5>
+                        <a href="/usuario/achievements" class="btn btn-outline-primary btn-sm">Ver Todos</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Achievement Item -->
+                            <div class="col-6 text-center mb-3" th:each="achievement : ${recentAchievements}">
+                                <div class="achievement-badge mx-auto mb-2"
+                                     th:classappend="${achievement.unlocked ? 'bg-warning text-dark' : 'bg-light text-muted'}">
+                                    <i th:class="${achievement.icon ?: 'fas fa-star'}"></i>
+                                </div>
+                                <small class="d-block" th:text="${achievement.name ?: 'Logro'}">Primera Reseña</small>
+                                <small class="text-muted" th:text="${achievement.description ?: ''}">Escribe tu primera reseña</small>
+                            </div>
+
+                            <!-- Default achievements if none -->
+                            <div th:if="${#lists.isEmpty(recentAchievements)}" class="col-12 text-center">
+                                <i class="fas fa-trophy fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">¡Empieza a explorar para desbloquear logros!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommended Movies Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-magic me-2 text-primary"></i>
+                            Recomendaciones Personalizadas
+                        </h5>
+                        <a href="/peliculas/recommendations" class="btn btn-outline-primary btn-sm">Ver Más</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" th:if="${recommendedMovies}">
+                            <div class="col-lg-2 col-md-3 col-sm-4 col-6 mb-3" th:each="movie : ${recommendedMovies}" th:object="${movie}">
+                                <div class="card h-100 text-decoration-none movie-card">
+                                    <img th:src="${movie.posterPath != null ? movie.posterPath : 'https://via.placeholder.com/300x450'}"
+                                         class="card-img-top" alt="Poster" style="height: 200px; object-fit: cover;">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title small mb-1" th:text="${movie.title}">Título</h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted" th:text="${movie.releaseYear}">2024</small>
+                                            <div class="rating-stars small">
+                                                <span th:text="${movie.averageRating != null ? movie.averageRating : '0.0'}">0.0</span>
+                                                <i class="fas fa-star ms-1"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer p-2">
+                                        <a th:href="@{/pelicula/{id}(id=${movie.id})}" class="btn btn-primary btn-sm w-100">
+                                            <i class="fas fa-eye me-1"></i>Ver Detalles
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div th:if="${#lists.isEmpty(recommendedMovies)}" class="text-center py-4">
+                            <i class="fas fa-magic fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">¡Reseña algunas películas para recibir recomendaciones personalizadas!</p>
+                            <a th:href="@{/peliculas}" class="btn btn-primary">
+                                <i class="fas fa-search me-2"></i>Explorar Películas
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <th:block th:insert="~{fragments/footer :: footer}"></th:block>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        // Chart for user statistics (if needed)
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize any interactive elements
+            console.log('Dashboard loaded successfully');
+
+            // Animate statistics cards on scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animation = 'fadeInUp 0.6s ease forwards';
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.stat-card').forEach(card => {
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>

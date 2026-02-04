@@ -74,10 +74,32 @@ public class RealEmailService implements IEmailService {
             log.info("✅ Email de confirmación enviado exitosamente a: {}", toEmail);
 
         } catch (MessagingException e) {
-            log.error("❌ Error enviando email de confirmación a {}: {}", toEmail, e.getMessage());
+            log.error("❌ Error SMTP enviando email de confirmación a {}: {}", toEmail, e.getMessage());
+            log.error("   🔍 Tipo de error: {}", e.getClass().getSimpleName());
+
+            // Información específica para problemas comunes
+            if (e.getMessage().contains("Authentication failed")) {
+                log.error("   💡 PROBLEMA DE AUTENTICACIÓN:");
+                log.error("      - Verifica que uses una 'Contraseña de aplicación' de Gmail");
+                log.error("      - NO uses tu contraseña normal de Gmail");
+                log.error("      - Asegúrate de tener verificación en 2 pasos activada");
+            } else if (e.getMessage().contains("Connection") || e.getMessage().contains("timeout")) {
+                log.error("   💡 PROBLEMA DE CONEXIÓN:");
+                log.error("      - Verifica tu conexión a internet");
+                log.error("      - Gmail SMTP: smtp.gmail.com:587");
+                log.error("      - Firewall o antivirus pueden bloquear conexiones SMTP");
+            } else if (e.getMessage().contains("recipient")) {
+                log.error("   💡 PROBLEMA CON EMAIL DESTINO:");
+                log.error("      - Verifica que el email destino sea válido: {}", toEmail);
+            }
+
             throw new RuntimeException("Error enviando email de confirmación: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("❌ Error inesperado enviando email: {}", e.getMessage());
+            log.error("   🔍 Tipo: {}", e.getClass().getSimpleName());
+            if (e.getCause() != null) {
+                log.error("   🔍 Causa: {}", e.getCause().getMessage());
+            }
             throw new RuntimeException("Error inesperado: " + e.getMessage(), e);
         }
     }

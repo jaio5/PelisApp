@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Usuarios - Admin Panel</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+
+    <style>
+        .admin-header {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+        }
+        .action-buttons .btn {
+            margin: 1px;
+            padding: 0.25rem 0.5rem;
+        }
+        .role-badge {
+            font-size: 0.7rem;
+            margin: 1px;
+        }
+        .stats-card {
+            transition: transform 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-3px);
+        }
+        .table-actions {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <th:block th:insert="~{fragments/navbar :: navbar}"></th:block>
+
+    <!-- Admin Header -->
+    <div class="admin-header py-4">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="h3 mb-2">
+                        <i class="fas fa-users me-2"></i>Gestión de Usuarios
+                    </h1>
+                    <p class="mb-0 opacity-75">Administra usuarios, roles y permisos del sistema</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0 justify-content-md-end">
+                            <li class="breadcrumb-item"><a href="/admin" class="text-white-50">Admin</a></li>
+                            <li class="breadcrumb-item active text-white">Usuarios</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stats-card bg-primary text-white h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="card-title h2 mb-0" th:text="${totalUsers ?: 0}">0</h4>
+                                <p class="card-text">Total Usuarios</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-users fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <small>
+                                <i class="fas fa-arrow-up me-1"></i>
+                                <span th:text="${newUsersThisMonth ?: 0}">0</span> este mes
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stats-card bg-success text-white h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="card-title h2 mb-0" th:text="${activeUsers ?: 0}">0</h4>
+                                <p class="card-text">Usuarios Activos</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-user-check fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <small>
+                                <i class="fas fa-clock me-1"></i>
+                                Últimos 30 días
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stats-card bg-warning text-dark h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="card-title h2 mb-0" th:text="${pendingUsers ?: 0}">0</h4>
+                                <p class="card-text">Pendientes</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-user-clock fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <small>
+                                <i class="fas fa-envelope me-1"></i>
+                                Sin confirmar email
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stats-card bg-danger text-white h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="card-title h2 mb-0" th:text="${bannedUsers ?: 0}">0</h4>
+                                <p class="card-text">Bloqueados</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-user-slash fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <small>
+                                <i class="fas fa-ban me-1"></i>
+                                Usuarios suspendidos
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Actions -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <div class="row">
+                            <!-- Search -->
+                            <div class="col-md-4 mb-2">
+                                <label for="searchUsers" class="visually-hidden">Buscar usuarios</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="searchUsers" placeholder="Buscar usuarios...">
+                                </div>
+                            </div>
+
+                            <!-- Role Filter -->
+                            <div class="col-md-3 mb-2">
+                                <label for="roleFilter" class="visually-hidden">Filtrar por rol</label>
+                                <select class="form-select" id="roleFilter">
+                                    <option value="">Todos los roles</option>
+                                    <option value="ADMIN">Administradores</option>
+                                    <option value="MODERATOR">Moderadores</option>
+                                    <option value="USER">Usuarios</option>
+                                </select>
+                            </div>
+
+                            <!-- Status Filter -->
+                            <div class="col-md-3 mb-2">
+                                <label for="statusFilter" class="visually-hidden">Filtrar por estado</label>
+                                <select class="form-select" id="statusFilter">
+                                    <option value="">Todos los estados</option>
+                                    <option value="active">Activos</option>
+                                    <option value="pending">Pendientes</option>
+                                    <option value="banned">Bloqueados</option>
+                                </select>
+                            </div>
+
+                            <!-- Date Filter -->
+                            <div class="col-md-2 mb-2">
+                                <label for="dateFilter" class="visually-hidden">Filtrar por fecha</label>
+                                <select class="form-select" id="dateFilter">
+                                    <option value="">Periodo</option>
+                                    <option value="today">Hoy</option>
+                                    <option value="week">Esta semana</option>
+                                    <option value="month">Este mes</option>
+                                    <option value="year">Este año</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 text-lg-end">
+                        <!-- Bulk Actions -->
+                        <div class="btn-group me-2" role="group">
+                            <button type="button" class="btn btn-outline-secondary dropdown-toggle"
+                                    data-bs-toggle="dropdown" id="bulkActions" disabled>
+                                <i class="fas fa-list me-1"></i>Acciones en lote
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="bulkAction('activate')">
+                                    <i class="fas fa-check me-2 text-success"></i>Activar seleccionados
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="bulkAction('deactivate')">
+                                    <i class="fas fa-pause me-2 text-warning"></i>Desactivar seleccionados
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="bulkAction('delete')">
+                                    <i class="fas fa-trash me-2 text-danger"></i>Eliminar seleccionados
+                                </a></li>
+                            </ul>
+                        </div>
+
+                        <!-- Export Button -->
+                        <div class="btn-group me-2" role="group">
+                            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="fas fa-download me-1"></i>Exportar
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/admin/users/export?format=csv">
+                                    <i class="fas fa-file-csv me-2"></i>CSV
+                                </a></li>
+                                <li><a class="dropdown-item" href="/admin/users/export?format=excel">
+                                    <i class="fas fa-file-excel me-2"></i>Excel
+                                </a></li>
+                                <li><a class="dropdown-item" href="/admin/users/export?format=pdf">
+                                    <i class="fas fa-file-pdf me-2"></i>PDF
+                                </a></li>
+                            </ul>
+                        </div>
+
+                        <!-- Refresh Button -->
+                        <button type="button" class="btn btn-outline-primary" onclick="refreshTable()">
+                            <i class="fas fa-sync-alt me-1"></i>Actualizar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-table me-2"></i>Lista de Usuarios
+                </h5>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-secondary me-2" id="selectedCount">0 seleccionados</span>
+                    <span class="text-muted small">Total: <span id="totalCount">0</span></span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="usersTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="text-center" style="width: 50px;">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="selectAll">
+                                        <label class="form-check-label visually-hidden" for="selectAll">Seleccionar todos</label>
+                                    </div>
+                                </th>
+                                <th scope="col" style="width: 80px;">Avatar</th>
+                                <th scope="col">Usuario</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Roles</th>
+                                <th scope="col">Estado</th>
+                                <th scope="col">Registrado</th>
+                                <th scope="col">Último Acceso</th>
+                                <th scope="col" class="text-center" style="width: 200px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dynamic content will be loaded via AJAX -->
+                            <tr th:each="user : ${users}" th:object="${user}">
+                                <td class="text-center">
+                                    <div class="form-check">
+                                        <input class="form-check-input user-checkbox" type="checkbox"
+                                               th:value="${user.id}" th:id="'user_' + ${user.id}">
+                                        <label class="form-check-label visually-hidden" th:for="'user_' + ${user.id}">
+                                            Seleccionar usuario <span th:text="${user.username}"></span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <img th:src="${user.avatar != null ? user.avatar : 'https://via.placeholder.com/40x40?text=' + (user.username != null ? user.username.substring(0,1).toUpperCase() : 'U')}"
+                                         class="user-avatar rounded-circle" alt="Avatar">
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong th:text="${user.username}">username</strong>
+                                        <br>
+                                        <small class="text-muted" th:text="${user.displayName != null ? user.displayName : 'Sin nombre'}">Display Name</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <span th:text="${user.email}">email@example.com</span>
+                                        <br>
+                                        <span th:if="${user.emailConfirmed}" class="badge bg-success status-badge">
+                                            <i class="fas fa-check-circle me-1"></i>Verificado
+                                        </span>
+                                        <span th:unless="${user.emailConfirmed}" class="badge bg-warning status-badge">
+                                            <i class="fas fa-exclamation-circle me-1"></i>Pendiente
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div th:each="role : ${user.roles}">
+                                        <span class="badge role-badge"
+                                              th:classappend="${role.name == 'ADMIN'} ? 'bg-danger' : (${role.name == 'MODERATOR'} ? 'bg-warning' : 'bg-primary')"
+                                              th:text="${role.name}">ROLE</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span th:if="${user.active}" class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Activo
+                                    </span>
+                                    <span th:unless="${user.active}" class="badge bg-secondary">
+                                        <i class="fas fa-pause me-1"></i>Inactivo
+                                    </span>
+                                </td>
+                                <td>
+                                    <small th:text="${user.registeredAt != null ? #temporals.format(user.registeredAt, 'dd/MM/yyyy') : 'N/A'}">01/01/2024</small>
+                                </td>
+                                <td>
+                                    <small th:text="${user.lastLoginDate != null ? #temporals.format(user.lastLoginDate, 'dd/MM/yyyy HH:mm') : 'Nunca'}">Nunca</small>
+                                </td>
+                                <td class="table-actions text-center">
+                                    <div class="action-buttons">
+                                        <!-- View -->
+                                        <button type="button" class="btn btn-sm btn-outline-info"
+                                                th:onclick="|viewUser(${user.id})|"
+                                                data-bs-toggle="tooltip" title="Ver detalles">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+
+                                        <!-- Edit -->
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                                th:onclick="|editUser(${user.id})|"
+                                                data-bs-toggle="tooltip" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+
+                                        <!-- Toggle Active -->
+                                        <button type="button" class="btn btn-sm"
+                                                th:classappend="${user.active} ? 'btn-outline-warning' : 'btn-outline-success'"
+                                                th:onclick="|toggleUserStatus(${user.id})|"
+                                                th:data-bs-title="${user.active} ? 'Desactivar usuario' : 'Activar usuario'">
+                                            <i th:class="${user.active} ? 'fas fa-pause' : 'fas fa-play'"></i>
+                                        </button>
+
+                                        <!-- Reset Password -->
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                th:onclick="|resetPassword(${user.id})|"
+                                                data-bs-toggle="tooltip" title="Resetear contraseña">
+                                            <i class="fas fa-key"></i>
+                                        </button>
+
+                                        <!-- Delete -->
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                th:onclick="|deleteUser(${user.id}, '${user.username}')|"
+                                                data-bs-toggle="tooltip" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Detail Modal -->
+    <div class="modal fade" id="userDetailModal" tabindex="-1" aria-labelledby="userDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userDetailModalLabel">
+                        <i class="fas fa-user me-2"></i>Detalles del Usuario
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="userDetailContent">
+                    <!-- Content loaded via AJAX -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <th:block th:insert="~{fragments/footer :: footer}"></th:block>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        let usersTable;
+
+        $(document).ready(function() {
+            // Initialize DataTable
+            usersTable = $('#usersTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/admin/api/users',
+                    type: 'GET',
+                    data: function(d) {
+                        d.search = $('#searchUsers').val();
+                        d.role = $('#roleFilter').val();
+                        d.status = $('#statusFilter').val();
+                        d.date = $('#dateFilter').val();
+                    }
+                },
+                columns: [
+                    { data: 'id', orderable: false, searchable: false },
+                    { data: 'avatar', orderable: false, searchable: false },
+                    { data: 'username' },
+                    { data: 'email' },
+                    { data: 'roles', orderable: false, searchable: false },
+                    { data: 'status' },
+                    { data: 'registeredAt' },
+                    { data: 'lastLoginDate' },
+                    { data: 'actions', orderable: false, searchable: false }
+                ],
+                order: [[6, 'desc']], // Order by registration date
+                pageLength: 25,
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+                },
+                drawCallback: function() {
+                    // Reinitialize tooltips
+                    $('[data-bs-toggle="tooltip"]').tooltip();
+                    updateSelectedCount();
+                }
+            });
+
+            // Filter event listeners
+            $('#searchUsers, #roleFilter, #statusFilter, #dateFilter').on('change keyup', function() {
+                usersTable.ajax.reload();
+            });
+
+            // Select all checkbox
+            $('#selectAll').on('change', function() {
+                $('.user-checkbox').prop('checked', $(this).is(':checked'));
+                updateSelectedCount();
+                updateBulkActionsState();
+            });
+
+            // Individual checkbox
+            $(document).on('change', '.user-checkbox', function() {
+                updateSelectedCount();
+                updateBulkActionsState();
+
+                // Update select all state
+                const totalCheckboxes = $('.user-checkbox').length;
+                const checkedCheckboxes = $('.user-checkbox:checked').length;
+                $('#selectAll').prop('indeterminate', checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes);
+                $('#selectAll').prop('checked', checkedCheckboxes === totalCheckboxes);
+            });
+        });
+
+        function updateSelectedCount() {
+            const count = $('.user-checkbox:checked').length;
+            $('#selectedCount').text(count + ' seleccionados');
+        }
+
+        function updateBulkActionsState() {
+            const hasSelected = $('.user-checkbox:checked').length > 0;
+            $('#bulkActions').prop('disabled', !hasSelected);
+        }
+
+        function refreshTable() {
+            usersTable.ajax.reload();
+        }
+
+        function viewUser(userId) {
+            $.ajax({
+                url: `/admin/api/users/${userId}`,
+                method: 'GET',
+                success: function(response) {
+                    $('#userDetailContent').html(response);
+                    $('#userDetailModal').modal('show');
+                },
+                error: function() {
+                    alert('Error al cargar los detalles del usuario');
+                }
+            });
+        }
+
+        function editUser(userId) {
+            window.location.href = `/admin/users/${userId}/edit`;
+        }
+
+        function toggleUserStatus(userId) {
+            if (confirm('¿Estás seguro de cambiar el estado de este usuario?')) {
+                $.ajax({
+                    url: `/admin/api/users/${userId}/toggle-status`,
+                    method: 'PUT',
+                    success: function() {
+                        usersTable.ajax.reload();
+                        showAlert('success', 'Estado del usuario actualizado correctamente');
+                    },
+                    error: function() {
+                        showAlert('danger', 'Error al actualizar el estado del usuario');
+                    }
+                });
+            }
+        }
+
+        function resetPassword(userId) {
+            if (confirm('¿Estás seguro de resetear la contraseña de este usuario? Se enviará un email con instrucciones.')) {
+                $.ajax({
+                    url: `/admin/api/users/${userId}/reset-password`,
+                    method: 'POST',
+                    success: function() {
+                        showAlert('success', 'Email de reseteo de contraseña enviado');
+                    },
+                    error: function() {
+                        showAlert('danger', 'Error al enviar el email de reseteo');
+                    }
+                });
+            }
+        }
+
+        function deleteUser(userId, username) {
+            if (confirm(`¿Estás seguro de eliminar el usuario "${username}"? Esta acción no se puede deshacer.`)) {
+                $.ajax({
+                    url: `/admin/api/users/${userId}`,
+                    method: 'DELETE',
+                    success: function() {
+                        usersTable.ajax.reload();
+                        showAlert('success', 'Usuario eliminado correctamente');
+                    },
+                    error: function() {
+                        showAlert('danger', 'Error al eliminar el usuario');
+                    }
+                });
+            }
+        }
+
+        function bulkAction(action) {
+            const selectedIds = $('.user-checkbox:checked').map(function() {
+                return $(this).val();
+            }).get();
+
+            if (selectedIds.length === 0) {
+                alert('Por favor, selecciona al menos un usuario');
+                return;
+            }
+
+            let confirmMessage = '';
+            switch(action) {
+                case 'activate':
+                    confirmMessage = `¿Activar ${selectedIds.length} usuarios?`;
+                    break;
+                case 'deactivate':
+                    confirmMessage = `¿Desactivar ${selectedIds.length} usuarios?`;
+                    break;
+                case 'delete':
+                    confirmMessage = `¿Eliminar ${selectedIds.length} usuarios? Esta acción no se puede deshacer.`;
+                    break;
+            }
+
+            if (confirm(confirmMessage)) {
+                $.ajax({
+                    url: `/admin/api/users/bulk/${action}`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(selectedIds),
+                    success: function() {
+                        usersTable.ajax.reload();
+                        showAlert('success', 'Acción ejecutada correctamente');
+                        $('#selectAll').prop('checked', false);
+                        updateSelectedCount();
+                        updateBulkActionsState();
+                    },
+                    error: function() {
+                        showAlert('danger', 'Error al ejecutar la acción');
+                    }
+                });
+            }
+        }
+
+        function showAlert(type, message) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            $('.container-fluid').prepend(alertHtml);
+
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                $('.alert').alert('close');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
