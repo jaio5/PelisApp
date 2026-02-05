@@ -58,6 +58,7 @@ public final class AppConstants {
     public static final String DEFAULT_IMAGES_PATH = "./data/images";
     public static final String POSTERS_SUBFOLDER = "posters";
     public static final String BACKDROPS_SUBFOLDER = "backdrops";
+    public static final String PROFILES_SUBFOLDER = "profiles";
     public static final String DEFAULT_SERVE_BASE = "/images";
 
     // Constantes de TMDB
@@ -123,6 +124,7 @@ public final class AppConstants {
     public static final String MOVIE_FILE_PREFIX = "movie_";
     public static final String ACTOR_FILE_PREFIX = "actor_";
     public static final String DIRECTOR_FILE_PREFIX = "director_";
+
 
     // Mensajes de logging mejorados
     public static final String LOG_SEPARATOR = "═══════════════════════════════════════════════════";

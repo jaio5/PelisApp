@@ -249,8 +249,8 @@ public class TMDBMovieLoaderService {
                 // Intentar descargar imagen local
                 try {
                     String fullUrl = tmdbClient.buildImageUrl(posterPath);
-                    String filename = "movie_" + movie.getTmdbId();
-                    String localPath = imageStorageService.downloadAndStoreImage(fullUrl, "posters", filename);
+                    String filename = AppConstants.MOVIE_FILE_PREFIX + movie.getTmdbId();
+                    String localPath = imageStorageService.downloadAndStoreImage(fullUrl, AppConstants.POSTERS_SUBFOLDER, filename);
                     if (localPath != null) {
                         movie.setPosterLocalPath(localPath);
                         log.debug("Imagen descargada para {}: {}", movie.getTitle(), localPath);
@@ -470,7 +470,7 @@ public class TMDBMovieLoaderService {
                             String fullUrl = tmdbClient.buildImageUrl(profilePath);
                             String filename = AppConstants.ACTOR_FILE_PREFIX + tmdbId;
                             String localPath = imageStorageService.downloadAndStoreImage(
-                                fullUrl, AppConstants.POSTERS_SUBFOLDER, filename);
+                                fullUrl, AppConstants.PROFILES_SUBFOLDER, filename);
                             if (localPath != null) {
                                 actor.setProfileLocalPath(localPath);
                                 log.debug("✓ Foto descargada para actor {}: {}", name, localPath);
@@ -509,7 +509,7 @@ public class TMDBMovieLoaderService {
                             String fullUrl = tmdbClient.buildImageUrl(profilePath);
                             String filename = AppConstants.DIRECTOR_FILE_PREFIX + tmdbId;
                             String localPath = imageStorageService.downloadAndStoreImage(
-                                fullUrl, AppConstants.POSTERS_SUBFOLDER, filename);
+                                fullUrl, AppConstants.PROFILES_SUBFOLDER, filename);
                             if (localPath != null) {
                                 director.setProfileLocalPath(localPath);
                                 log.debug("✓ Foto descargada para director {}: {}", name, localPath);

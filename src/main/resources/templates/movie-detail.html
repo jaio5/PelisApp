@@ -218,6 +218,138 @@
             color: #e55a30;
         }
 
+        /* Estilos para el reparto compacto (desktop) */
+        .cast-compact-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .cast-compact-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .cast-compact-item:hover {
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .cast-compact-image {
+            flex-shrink: 0;
+        }
+
+        .cast-compact-photo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: var(--secondary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted-color);
+        }
+
+        .cast-no-photo {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--muted-color);
+        }
+
+        .cast-compact-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .cast-compact-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cast-compact-role {
+            font-size: 0.8rem;
+            color: var(--muted-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Estilos originales para tarjetas de reparto (se mantienen para móvil) */
+        .cast-card {
+            background: var(--secondary-color);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .cast-card:hover {
+            border-color: rgba(255, 107, 53, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .cast-image-container {
+            margin-bottom: 1rem;
+        }
+
+        .cast-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto;
+        }
+
+        .cast-no-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            color: var(--muted-color);
+        }
+
+        .cast-name {
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .cast-character {
+            font-size: 0.8rem;
+        }
+
+        /* Responsive: En móvil (< lg) mostrar el diseño original de tarjetas */
+        @media (max-width: 991.98px) {
+            .cast-compact-list {
+                display: none;
+            }
+
+            /* Mostrar las tarjetas de reparto originales en móvil */
+            .cast-section .cast-mobile-cards {
+                display: block;
+            }
+        }
+
+        @media (min-width: 992px) {
+            /* En desktop, ocultar las tarjetas móviles */
+            .cast-mobile-cards {
+                display: none;
+            }
+        }
+
         @media (max-width: 768px) {
             .movie-info h1 {
                 font-size: 2rem;
@@ -281,7 +413,7 @@
                     <div class="text-center">
                         <!-- Poster de la película -->
                         <img th:if="${movie.posterLocalPath != null && !movie.posterLocalPath.isEmpty()}"
-                             th:src="@{'/images/' + ${movie.posterLocalPath}}"
+                             th:src="${movie.posterLocalPath}"
                              th:alt="${movie.title}"
                              class="movie-poster">
 
@@ -332,179 +464,106 @@
             </div>
         </div>
 
-        <!-- Sección de Reparto y Dirección -->
-        <div class="cast-section mb-5">
-            <!-- DEBUG: Verificar datos -->
-            <div class="alert alert-info">
-                <strong>DEBUG INFO:</strong><br>
-                movieDetails existe: <span th:text="${movieDetails != null}">false</span><br>
-                <span th:if="${movieDetails != null}">
-                    Directores: <span th:text="${movieDetails.directors != null ? #lists.size(movieDetails.directors) : 'null'}">0</span><br>
-                    Cast: <span th:text="${movieDetails.castMembers != null ? #lists.size(movieDetails.castMembers) : 'null'}">0</span><br>
-                </span>
-            </div>
-
-            <!-- Directores -->
-            <div class="mb-4" th:if="${movieDetails != null and movieDetails.directors != null and not #lists.isEmpty(movieDetails.directors)}">
-                <h4><i class="fas fa-video me-2"></i>Dirección</h4>
-                <div class="row g-3">
-                    <div th:each="director : ${movieDetails.directors}" class="col-md-3 col-sm-4 col-6">
-                        <div class="cast-card">
-                            <div class="cast-image-container">
-                                <img th:if="${director.profileUrl != null}"
-                                     th:src="${director.profileUrl}"
-                                     th:alt="${director.name}"
-                                     class="cast-image">
-                                <div th:unless="${director.profileUrl != null}"
-                                     class="cast-image cast-no-image">
-                                    <i class="fas fa-user fa-2x"></i>
-                                </div>
-                            </div>
-                            <div class="cast-info">
-                                <div class="cast-name" th:text="${director.name}">Nombre Director</div>
-                                <div class="cast-character text-muted" th:text="${director.job}">Director</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reparto -->
-            <div class="mb-4" th:if="${movieDetails != null and movieDetails.castMembers != null and not #lists.isEmpty(movieDetails.castMembers)}">
-                <h4><i class="fas fa-users me-2"></i>Reparto Principal</h4>
-                <div class="row g-3">
-                    <div th:each="actor : ${movieDetails.castMembers}" class="col-md-3 col-sm-4 col-6">
-                        <div class="cast-card">
-                            <div class="cast-image-container">
-                                <img th:if="${actor.profileUrl != null}"
-                                     th:src="${actor.profileUrl}"
-                                     th:alt="${actor.name}"
-                                     class="cast-image">
-                                <div th:unless="${actor.profileUrl != null}"
-                                     class="cast-image cast-no-image">
-                                    <i class="fas fa-user fa-2x"></i>
-                                </div>
-                            </div>
-                            <div class="cast-info">
-                                <div class="cast-name" th:text="${actor.name}">Nombre Actor</div>
-                                <div class="cast-character text-muted" th:text="${actor.character}">Personaje</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Mensaje si no hay reparto -->
-            <div th:if="${movieDetails == null or movieDetails.directors == null or #lists.isEmpty(movieDetails.directors)}">
-                <div class="alert alert-warning">
-                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Información del Reparto</h5>
-                    <p>El reparto no está disponible para esta película. Esto puede deberse a:</p>
-                    <ul>
-                        <li>La película no tiene TMDB ID asociado</li>
-                        <li>TMDB API no está configurado correctamente</li>
-                        <li>La película no tiene información de reparto en TMDB</li>
-                    </ul>
-                    <small class="text-muted">
-                        TMDB ID: <span th:text="${movie.tmdbId ?: 'No disponible'}">-</span>
-                    </small>
-                </div>
-            </div>
-        </div>
-
+        <!-- Sección principal con información y reparto -->
         <div class="row">
-            <div class="col-lg-4">
-                <!-- Sección de Valoración Promedio -->
-                <div class="rating-section">
-                    <h3><i class="fas fa-star me-2"></i>Valoración de Usuarios</h3>
+            <!-- Columna principal: Valoraciones y Reseñas -->
+            <div class="col-lg-8 order-2 order-lg-1">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <!-- Sección de Valoración Promedio -->
+                        <div class="rating-section">
+                            <h3><i class="fas fa-star me-2"></i>Valoración de Usuarios</h3>
 
-                    <div class="average-rating" th:if="${movieStats.totalReviews > 0}">
-                        <div class="rating-number" th:text="${movieStats.averageRatingFormatted}">4.5</div>
-                        <div class="rating-stars">
-                            <span th:each="i : ${#numbers.sequence(1, 5)}"
-                                  th:class="${i <= movieStats.averageRating ? 'fas fa-star' : (i - 0.5 <= movieStats.averageRating ? 'fas fa-star-half-alt' : 'far fa-star')}"></span>
-                        </div>
-                        <div class="text-muted">
-                            <span th:text="${movieStats.totalReviews}">150</span> valoraciones
-                        </div>
-                    </div>
-
-                    <div class="average-rating" th:unless="${movieStats.totalReviews > 0}">
-                        <div class="rating-number">-</div>
-                        <div class="text-muted">Sin valoraciones aún</div>
-                    </div>
-
-                    <!-- Distribución de estrellas -->
-                    <div class="star-distribution" th:if="${movieStats.totalReviews > 0}">
-                        <h5>Distribución de Valoraciones</h5>
-                        <div th:each="star : ${#numbers.sequence(5, 1, -1)}" class="star-bar">
-                            <span class="star-label">
-                                <span th:text="${star}">5</span>
-                                <i class="fas fa-star text-warning"></i>
-                            </span>
-                            <div class="progress flex-grow-1">
-                                <div class="progress-bar"
-                                     th:style="'width: ' + ${movieStats.getStarPercentage(star)} + '%'"></div>
+                            <div class="average-rating" th:if="${movieStats.totalReviews > 0}">
+                                <div class="rating-number" th:text="${movieStats.averageRatingFormatted}">4.5</div>
+                                <div class="rating-stars">
+                                    <span th:each="i : ${#numbers.sequence(1, 5)}"
+                                          th:class="${i <= movieStats.averageRating ? 'fas fa-star' : (i - 0.5 <= movieStats.averageRating ? 'fas fa-star-half-alt' : 'far fa-star')}"></span>
+                                </div>
+                                <div class="text-muted">
+                                    <span th:text="${movieStats.totalReviews}">150</span> valoraciones
+                                </div>
                             </div>
-                            <small class="text-muted ms-2" th:text="${movieStats.starDistribution[star - 1]}">10</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="col-lg-8">
-                <!-- Formulario para añadir reseña -->
-                <div class="review-form" th:if="${canReview}">
-                    <h4><i class="fas fa-pen me-2"></i>Escribe tu Reseña</h4>
-                    <form th:action="@{'/pelicula/' + ${movie.id} + '/review'}" method="post">
-                        <div class="mb-3">
-                            <label class="form-label">Tu valoración:</label>
-                            <div class="star-rating" id="starRating">
-                                <input type="radio" name="stars" value="1" id="star1" required>
-                                <label for="star1" class="fas fa-star"></label>
-                                <input type="radio" name="stars" value="2" id="star2">
-                                <label for="star2" class="fas fa-star"></label>
-                                <input type="radio" name="stars" value="3" id="star3">
-                                <label for="star3" class="fas fa-star"></label>
-                                <input type="radio" name="stars" value="4" id="star4">
-                                <label for="star4" class="fas fa-star"></label>
-                                <input type="radio" name="stars" value="5" id="star5">
-                                <label for="star5" class="fas fa-star"></label>
+                            <div class="average-rating" th:unless="${movieStats.totalReviews > 0}">
+                                <div class="rating-number">-</div>
+                                <div class="text-muted">Sin valoraciones aún</div>
+                            </div>
+
+                            <!-- Distribución de estrellas -->
+                            <div class="star-distribution" th:if="${movieStats.totalReviews > 0}">
+                                <h5>Distribución de Valoraciones</h5>
+                                <div th:each="star : ${#numbers.sequence(5, 1, -1)}" class="star-bar">
+                                    <span class="star-label">
+                                        <span th:text="${star}">5</span>
+                                        <i class="fas fa-star text-warning"></i>
+                                    </span>
+                                    <div class="progress flex-grow-1">
+                                        <div class="progress-bar"
+                                             th:style="'width: ' + ${movieStats.getStarPercentage(star)} + '%'"></div>
+                                    </div>
+                                    <small class="text-muted ms-2" th:text="${movieStats.starDistribution[star - 1]}">10</small>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label for="reviewText" class="form-label">Tu comentario:</label>
-                            <textarea class="form-control" id="reviewText" name="text" rows="4"
-                                      placeholder="Comparte tu opinión sobre esta película..."
-                                      required minlength="10" maxlength="1000"></textarea>
-                            <div class="form-text">Mínimo 10 caracteres, máximo 1000.</div>
+                    <div class="col-lg-6">
+                        <!-- Formulario para añadir reseña -->
+                        <div class="review-form" th:if="${canReview}">
+                            <h4><i class="fas fa-pen me-2"></i>Escribe tu Reseña</h4>
+                            <form th:action="@{'/pelicula/' + ${movie.id} + '/review'}" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label">Tu valoración:</label>
+                                    <div class="star-rating" id="starRating">
+                                        <input type="radio" name="stars" value="1" id="star1" required>
+                                        <label for="star1" class="fas fa-star"></label>
+                                        <input type="radio" name="stars" value="2" id="star2">
+                                        <label for="star2" class="fas fa-star"></label>
+                                        <input type="radio" name="stars" value="3" id="star3">
+                                        <label for="star3" class="fas fa-star"></label>
+                                        <input type="radio" name="stars" value="4" id="star4">
+                                        <label for="star4" class="fas fa-star"></label>
+                                        <input type="radio" name="stars" value="5" id="star5">
+                                        <label for="star5" class="fas fa-star"></label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="reviewText" class="form-label">Tu comentario:</label>
+                                    <textarea class="form-control" id="reviewText" name="text" rows="3"
+                                              placeholder="Comparte tu opinión sobre esta película..."
+                                              required minlength="10" maxlength="1000"></textarea>
+                                    <div class="form-text">Mínimo 10 caracteres, máximo 1000.</div>
+                                </div>
+
+                                <button type="submit" class="btn btn-sm" style="background: var(--accent-color); color: white;">
+                                    <i class="fas fa-paper-plane me-2"></i>
+                                    Publicar Reseña
+                                </button>
+                            </form>
                         </div>
 
-                        <button type="submit" class="btn" style="background: var(--accent-color); color: white;">
-                            <i class="fas fa-paper-plane me-2"></i>
-                            Publicar Reseña
-                        </button>
-                    </form>
-                </div>
+                        <!-- Mensaje si ya tiene reseña -->
+                        <div class="review-form" th:if="${userReview != null}">
+                            <h4><i class="fas fa-check-circle me-2"></i>Tu Reseña</h4>
+                            <div class="alert alert-info">
+                                <strong>Ya has valorado esta película</strong><br>
+                                Puntuación: <span th:each="i : ${#numbers.sequence(1, userReview.stars)}" class="text-warning">★</span><br>
+                                <em th:text="${userReview.text}">Tu comentario...</em>
+                            </div>
+                        </div>
 
-                <!-- Mensaje si ya tiene reseña -->
-                <div class="review-form" th:if="${userReview != null}">
-                    <h4><i class="fas fa-check-circle me-2"></i>Tu Reseña</h4>
-                    <div class="alert alert-info">
-                        <strong>Ya has valorado esta película</strong><br>
-                        Puntuación: <span th:each="i : ${#numbers.sequence(1, userReview.stars)}" class="text-warning">★</span><br>
-                        <em th:text="${userReview.text}">Tu comentario...</em>
-                    </div>
-                </div>
-
-                <!-- Mensaje si no está autenticado -->
-                <div class="review-form" th:unless="${isAuthenticated}">
-                    <h4><i class="fas fa-sign-in-alt me-2"></i>Valora esta Película</h4>
-                    <div class="alert alert-warning">
-                        <strong>Inicia sesión para poder valorar y comentar películas</strong><br>
-                        <a th:href="@{/login}" class="btn btn-sm mt-2" style="background: var(--accent-color); color: white;">
-                            Iniciar Sesión
-                        </a>
+                        <!-- Mensaje si no está autenticado -->
+                        <div class="review-form" th:unless="${isAuthenticated}">
+                            <h4><i class="fas fa-sign-in-alt me-2"></i>Valora esta Película</h4>
+                            <div class="alert alert-warning">
+                                <strong>Inicia sesión para poder valorar y comentar películas</strong><br>
+                                <a th:href="@{/login}" class="btn btn-sm mt-2" style="background: var(--accent-color); color: white;">
+                                    Iniciar Sesión
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -546,6 +605,139 @@
                             <span class="review-date" th:text="${#temporals.format(review.createdAt, 'dd/MM/yyyy HH:mm')}">
                                 01/01/2023 12:00
                             </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna lateral: Reparto y Dirección (compacta en desktop, completa en móvil) -->
+            <div class="col-lg-4 order-1 order-lg-2 mb-4">
+                <div class="cast-section">
+                    <!-- DEBUG: Verificar datos -->
+                    <div class="alert alert-info d-lg-none">
+                        <strong>DEBUG INFO:</strong><br>
+                        movieDetails existe: <span th:text="${movieDetails != null}">false</span><br>
+                        <span th:if="${movieDetails != null}">
+                            Directores: <span th:text="${movieDetails.directors != null ? #lists.size(movieDetails.directors) : 'null'}">0</span><br>
+                            Cast: <span th:text="${movieDetails.castMembers != null ? #lists.size(movieDetails.castMembers) : 'null'}">0</span><br>
+                        </span>
+                    </div>
+
+                    <!-- Directores -->
+                    <div class="mb-4" th:if="${movieDetails != null and movieDetails.directors != null and not #lists.isEmpty(movieDetails.directors)}">
+                        <h5><i class="fas fa-video me-2"></i>Dirección</h5>
+
+                        <!-- Diseño compacto para desktop -->
+                        <div class="cast-compact-list">
+                            <div th:each="director : ${movieDetails.directors}" class="cast-compact-item">
+                                <div class="cast-compact-image">
+                                    <img th:if="${director.profileUrl != null}"
+                                         th:src="${director.profileUrl}"
+                                         th:alt="${director.name}"
+                                         class="cast-compact-photo">
+                                    <div th:unless="${director.profileUrl != null}"
+                                         class="cast-compact-photo cast-no-photo">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                </div>
+                                <div class="cast-compact-info">
+                                    <div class="cast-compact-name" th:text="${director.name}">Nombre Director</div>
+                                    <div class="cast-compact-role text-muted" th:text="${director.job}">Director</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Diseño de tarjetas para móvil -->
+                        <div class="cast-mobile-cards">
+                            <div class="row g-3">
+                                <div th:each="director : ${movieDetails.directors}" class="col-6 col-sm-4">
+                                    <div class="cast-card">
+                                        <div class="cast-image-container">
+                                            <img th:if="${director.profileUrl != null}"
+                                                 th:src="${director.profileUrl}"
+                                                 th:alt="${director.name}"
+                                                 class="cast-image">
+                                            <div th:unless="${director.profileUrl != null}"
+                                                 class="cast-image cast-no-image">
+                                                <i class="fas fa-user fa-2x"></i>
+                                            </div>
+                                        </div>
+                                        <div class="cast-info">
+                                            <div class="cast-name" th:text="${director.name}">Nombre Director</div>
+                                            <div class="cast-character text-muted" th:text="${director.job}">Director</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reparto -->
+                    <div class="mb-4" th:if="${movieDetails != null and movieDetails.castMembers != null and not #lists.isEmpty(movieDetails.castMembers)}">
+                        <h5><i class="fas fa-users me-2"></i>Reparto Principal</h5>
+
+                        <!-- Diseño compacto para desktop -->
+                        <div class="cast-compact-list">
+                            <div th:each="actor, iterStat : ${movieDetails.castMembers}"
+                                 th:if="${iterStat.index < 8}"
+                                 class="cast-compact-item">
+                                <div class="cast-compact-image">
+                                    <img th:if="${actor.profileUrl != null}"
+                                         th:src="${actor.profileUrl}"
+                                         th:alt="${actor.name}"
+                                         class="cast-compact-photo">
+                                    <div th:unless="${actor.profileUrl != null}"
+                                         class="cast-compact-photo cast-no-photo">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                </div>
+                                <div class="cast-compact-info">
+                                    <div class="cast-compact-name" th:text="${actor.name}">Nombre Actor</div>
+                                    <div class="cast-compact-role text-muted" th:text="${actor.character}">Personaje</div>
+                                </div>
+                            </div>
+
+                            <!-- Mostrar "Ver más" si hay más actores -->
+                            <div th:if="${#lists.size(movieDetails.castMembers) > 8}" class="text-center mt-2">
+                                <button class="btn btn-outline-light btn-sm" onclick="toggleFullCast()">
+                                    <i class="fas fa-plus me-2"></i>Ver más reparto
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Diseño de tarjetas para móvil -->
+                        <div class="cast-mobile-cards">
+                            <div class="row g-3">
+                                <div th:each="actor : ${movieDetails.castMembers}" class="col-6 col-sm-4">
+                                    <div class="cast-card">
+                                        <div class="cast-image-container">
+                                            <img th:if="${actor.profileUrl != null}"
+                                                 th:src="${actor.profileUrl}"
+                                                 th:alt="${actor.name}"
+                                                 class="cast-image">
+                                            <div th:unless="${actor.profileUrl != null}"
+                                                 class="cast-image cast-no-image">
+                                                <i class="fas fa-user fa-2x"></i>
+                                            </div>
+                                        </div>
+                                        <div class="cast-info">
+                                            <div class="cast-name" th:text="${actor.name}">Nombre Actor</div>
+                                            <div class="cast-character text-muted" th:text="${actor.character}">Personaje</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mensaje si no hay reparto -->
+                    <div th:if="${movieDetails == null or movieDetails.directors == null or #lists.isEmpty(movieDetails.directors)}">
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle me-2"></i>Información del Reparto</h6>
+                            <p class="small">El reparto no está disponible para esta película.</p>
+                            <small class="text-muted">
+                                TMDB ID: <span th:text="${movie.tmdbId ?: 'No disponible'}">-</span>
+                            </small>
                         </div>
                     </div>
                 </div>

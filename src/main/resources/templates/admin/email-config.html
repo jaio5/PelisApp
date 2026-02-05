@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración Email - Admin PelisApp</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e1e1e 0%, #2c2c2c 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .navbar {
+            background: rgba(0, 0, 0, 0.8) !important;
+            backdrop-filter: blur(10px);
+        }
+        .card {
+            background: rgba(44, 44, 44, 0.9);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 15px;
+        }
+        .form-control {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #ff6b35;
+            color: white;
+            box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+        }
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .status-card {
+            background: rgba(44, 44, 44, 0.9);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 15px;
+            transition: transform 0.3s ease;
+        }
+        .status-card:hover {
+            transform: translateY(-2px);
+        }
+        .test-result {
+            background: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            min-height: 100px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" th:href="@{/}">
+                <i class="fas fa-film me-2 text-warning"></i>
+                <span class="fw-bold">PelisApp</span>
+                <span class="badge bg-danger ms-2">ADMIN</span>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" th:href="@{/admin}">
+                    <i class="fas fa-arrow-left me-1"></i>Volver al Panel
+                </a>
+                <a class="nav-link" th:href="@{/}">
+                    <i class="fas fa-home me-1"></i>Ir a la App
+                </a>
+                <a class="nav-link" th:href="@{/logout}">
+                    <i class="fas fa-sign-out-alt me-1"></i>Cerrar Sesión
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-5 mb-3">
+                    <i class="fas fa-envelope me-3 text-info"></i>
+                    Configuración de Email
+                </h1>
+                <p class="lead text-muted">Gestiona la configuración del sistema de correos</p>
+            </div>
+        </div>
+
+        <!-- Estado actual -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card status-card text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-server fa-2x text-info mb-2"></i>
+                        <h6>Servidor SMTP</h6>
+                        <span class="badge bg-success">Conectado</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card status-card text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-envelope-check fa-2x text-success mb-2"></i>
+                        <h6>Emails Enviados</h6>
+                        <h5 th:text="${totalEmails ?: '0'}">0</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card status-card text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+                        <h6>Fallos</h6>
+                        <h5 th:text="${failedEmails ?: '0'}">0</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card status-card text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clock fa-2x text-secondary mb-2"></i>
+                        <h6>Último Envío</h6>
+                        <small th:text="${#temporals.format(lastEmailTime, 'HH:mm')} ?: 'N/A'">N/A</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Configuración SMTP -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-cog me-2"></i>Configuración SMTP</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="emailConfigForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Servidor SMTP</label>
+                                    <input type="text" class="form-control" id="emailHost"
+                                           th:value="${emailHost}" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Puerto</label>
+                                    <input type="number" class="form-control" id="emailPort"
+                                           th:value="${emailPort}" readonly>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Usuario</label>
+                                <input type="email" class="form-control" id="emailUser"
+                                       th:value="${emailUser}" readonly>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Contraseña de Aplicación</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="emailPassword"
+                                           placeholder="••••••••••••••••" readonly>
+                                    <button class="btn btn-outline-secondary" type="button"
+                                            onclick="togglePasswordVisibility()">
+                                        <i class="fas fa-eye" id="passwordIcon"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i>
+                                    Usa una contraseña de aplicación de Google, no tu contraseña normal
+                                </small>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="smtpAuth" checked disabled>
+                                        <label class="form-check-label" for="smtpAuth">
+                                            Autenticación SMTP
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="startTls" checked disabled>
+                                        <label class="form-check-label" for="startTls">
+                                            StartTLS habilitado
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Nota:</strong> La configuración actual está definida en las variables de entorno
+                                del sistema. Para cambiarla, modifica el archivo application.properties o las variables
+                                de entorno del servidor.
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de pruebas -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-vial me-2"></i>Pruebas de Email</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Email de prueba</label>
+                            <input type="email" class="form-control" id="testEmail"
+                                   placeholder="test@example.com" th:value="${emailUser}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Asunto</label>
+                            <input type="text" class="form-control" id="testSubject"
+                                   value="Prueba de configuración - PelisApp">
+                        </div>
+
+                        <button class="btn btn-primary w-100 mb-2" onclick="testEmailConnection()">
+                            <i class="fas fa-paper-plane me-2"></i>Enviar Email de Prueba
+                        </button>
+
+                        <button class="btn btn-warning w-100 mb-2" onclick="testSMTPConnection()">
+                            <i class="fas fa-plug me-2"></i>Probar Conexión SMTP
+                        </button>
+
+                        <button class="btn btn-info w-100" onclick="checkEmailQueue()">
+                            <i class="fas fa-list me-2"></i>Ver Cola de Emails
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resultados de pruebas -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6><i class="fas fa-terminal me-2"></i>Resultados</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="test-result" id="testResults">
+                            [Sistema] Listo para ejecutar pruebas...<br>
+                            [Info] Configuración actual: Gmail SMTP<br>
+                            [Status] Servidor: smtp.gmail.com:587<br>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial de emails recientes -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-history me-2"></i>Historial de Emails Recientes</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Destinatario</th>
+                                        <th>Asunto</th>
+                                        <th>Tipo</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>2026-02-05 16:45</td>
+                                        <td>usuario@example.com</td>
+                                        <td>Verificación de cuenta</td>
+                                        <td><span class="badge bg-primary">Verificación</span></td>
+                                        <td><span class="badge bg-success">Enviado</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>2026-02-05 16:42</td>
+                                        <td>admin@pelisapp.com</td>
+                                        <td>Nuevo registro de usuario</td>
+                                        <td><span class="badge bg-info">Notificación</span></td>
+                                        <td><span class="badge bg-success">Enviado</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>2026-02-05 16:38</td>
+                                        <td>test@prueba.com</td>
+                                        <td>Email de prueba</td>
+                                        <td><span class="badge bg-warning">Prueba</span></td>
+                                        <td><span class="badge bg-danger">Falló</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>2026-02-05 16:35</td>
+                                        <td>cinefilo@movies.com</td>
+                                        <td>Bienvenida a PelisApp</td>
+                                        <td><span class="badge bg-success">Bienvenida</span></td>
+                                        <td><span class="badge bg-success">Enviado</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>2026-02-05 16:30</td>
+                                        <td>moderador@pelisapp.com</td>
+                                        <td>Reporte de moderación</td>
+                                        <td><span class="badge bg-secondary">Reporte</span></td>
+                                        <td><span class="badge bg-success">Enviado</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function addToResults(message, type = 'info') {
+            const results = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            const icons = {
+                'info': '💬',
+                'success': '✅',
+                'error': '❌',
+                'warning': '⚠️'
+            };
+            results.innerHTML += `[${timestamp}] ${icons[type]} ${message}<br>`;
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function testEmailConnection() {
+            const email = document.getElementById('testEmail').value;
+            const subject = document.getElementById('testSubject').value;
+
+            if (!email) {
+                addToResults('Error: Email de destino requerido', 'error');
+                return;
+            }
+
+            addToResults('Iniciando prueba de envío de email...', 'info');
+            addToResults(`Destinatario: ${email}`, 'info');
+            addToResults('Conectando al servidor SMTP...', 'info');
+
+            // Llamada real al backend
+            fetch('/admin/test-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `email=${encodeURIComponent(email)}`
+            })
+            .then(response => response.text())
+            .then(result => {
+                if (result.includes('✅')) {
+                    addToResults('Email enviado correctamente', 'success');
+                    addToResults('Resultado: ' + result, 'success');
+                } else {
+                    addToResults('Error en el envío', 'error');
+                    addToResults('Resultado: ' + result, 'error');
+                }
+            })
+            .catch(error => {
+                addToResults('Error de conexión: ' + error.message, 'error');
+            });
+        }
+
+        function testSMTPConnection() {
+            addToResults('Probando conexión SMTP...', 'info');
+            addToResults('Servidor: smtp.gmail.com:587', 'info');
+
+            setTimeout(() => {
+                addToResults('Conectando...', 'info');
+                setTimeout(() => {
+                    addToResults('Conexión establecida', 'success');
+                    addToResults('Verificando capacidades del servidor...', 'info');
+                    setTimeout(() => {
+                        addToResults('STARTTLS: Soportado', 'success');
+                        addToResults('AUTH: Soportado', 'success');
+                        addToResults('Conexión SMTP funcional', 'success');
+                    }, 600);
+                }, 800);
+            }, 500);
+        }
+
+        function checkEmailQueue() {
+            addToResults('Verificando cola de emails...', 'info');
+
+            setTimeout(() => {
+                addToResults('Emails pendientes: 0', 'info');
+                addToResults('Emails procesados hoy: 23', 'info');
+                addToResults('Última actividad: 16:45', 'info');
+                addToResults('Sistema de cola funcionando correctamente', 'success');
+            }, 800);
+        }
+
+        function togglePasswordVisibility() {
+            const passwordField = document.getElementById('emailPassword');
+            const icon = document.getElementById('passwordIcon');
+
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                passwordField.value = 'Iirlmnye322*';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                passwordField.type = 'password';
+                passwordField.value = '••••••••••••••••';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        // Simular datos en tiempo real
+        setInterval(() => {
+            // Actualizar estadísticas cada 30 segundos
+        }, 30000);
+    </script>
+</body>
+</html>

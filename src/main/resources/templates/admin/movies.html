@@ -78,6 +78,61 @@
                 </div>
             </div>
 
+            <!-- Nueva sección para redescarga de carátulas -->
+            <hr class="my-4" style="border-color: rgba(255, 107, 53, 0.5);">
+
+            <h4 class="mb-3"><i class="fas fa-images me-2 text-warning"></i>Gestión de Carátulas</h4>
+
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-dark border-success">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-brain me-2"></i>Descarga Inteligente</h5>
+                            <p class="small">Solo descarga carátulas faltantes</p>
+                            <button onclick="downloadMissingPosters()" class="btn btn-success">
+                                <i class="fas fa-lightbulb me-2"></i>Solo Faltantes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-dark border-warning">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-download me-2"></i>Redescargar Todas</h5>
+                            <p class="small">Redescarga todas las carátulas de películas</p>
+                            <button onclick="redownloadPosters()" class="btn btn-warning">
+                                <i class="fas fa-sync-alt me-2"></i>Redescargar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-dark border-info">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-clock me-2"></i>Redescarga Async</h5>
+                            <p class="small">Redescarga en segundo plano</p>
+                            <button onclick="redownloadPostersAsync()" class="btn btn-info">
+                                <i class="fas fa-play me-2"></i>Async
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-dark border-secondary">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-chart-bar me-2"></i>Estadísticas</h5>
+                            <p class="small">Ver estadísticas de imágenes</p>
+                            <button onclick="getPosterStats()" class="btn btn-secondary">
+                                <i class="fas fa-info me-2"></i>Ver Stats
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <div class="card bg-dark border-primary">
@@ -189,6 +244,67 @@
             })
             .catch(error => {
                 updateStatus('❌ Error en carga automática: ' + error.message);
+            });
+        }
+
+        // Funciones para redescarga de carátulas
+        function downloadMissingPosters() {
+            updateStatus('🧠 Iniciando descarga inteligente de carátulas faltantes...', true);
+
+            fetch('/admin/download-missing-posters', {
+                method: 'POST'
+            })
+            .then(response => response.text())
+            .then(result => {
+                updateStatus(result);
+            })
+            .catch(error => {
+                updateStatus('❌ Error en descarga inteligente: ' + error.message);
+            });
+        }
+
+        function redownloadPosters() {
+            updateStatus('🖼️ Iniciando redescarga de todas las carátulas...', true);
+
+            fetch('/admin/redownload-posters', {
+                method: 'POST'
+            })
+            .then(response => response.text())
+            .then(result => {
+                updateStatus(result);
+            })
+            .catch(error => {
+                updateStatus('❌ Error redescargando carátulas: ' + error.message);
+            });
+        }
+
+        function redownloadPostersAsync() {
+            updateStatus('🔄 Iniciando redescarga asincrónica...', true);
+
+            fetch('/admin/redownload-posters-async', {
+                method: 'POST'
+            })
+            .then(response => response.text())
+            .then(result => {
+                updateStatus(result);
+            })
+            .catch(error => {
+                updateStatus('❌ Error en redescarga asincrónica: ' + error.message);
+            });
+        }
+
+        function getPosterStats() {
+            updateStatus('📊 Obteniendo estadísticas de carátulas...', true);
+
+            fetch('/admin/poster-stats', {
+                method: 'GET'
+            })
+            .then(response => response.text())
+            .then(result => {
+                updateStatus(result);
+            })
+            .catch(error => {
+                updateStatus('❌ Error obteniendo estadísticas: ' + error.message);
             });
         }
 

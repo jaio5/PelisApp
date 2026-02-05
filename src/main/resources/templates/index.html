@@ -270,16 +270,18 @@
                             <div class="movie-poster">
                                 <!-- Imagen local si existe -->
                                 <img th:if="${movie.posterLocalPath != null && !movie.posterLocalPath.isEmpty()}"
-                                     th:src="@{'/images/' + ${movie.posterLocalPath}}"
+                                     th:src="${movie.posterLocalPath}"
                                      th:alt="${movie.title}"
-                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'placeholder-poster\'><i class=\'fas fa-film\'></i></div>';">
+                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'placeholder-poster\'><i class=\'fas fa-film\'></i></div>';"
+                                     class="img-fluid">
 
                                 <!-- Imagen de TMDB si no hay local -->
                                 <img th:unless="${movie.posterLocalPath != null && !movie.posterLocalPath.isEmpty()}"
                                      th:if="${movie.posterPath != null && !movie.posterPath.isEmpty()}"
                                      th:src="${movie.posterPath.startsWith('http') ? movie.posterPath : 'https://image.tmdb.org/t/p/w500' + movie.posterPath}"
                                      th:alt="${movie.title}"
-                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'placeholder-poster\'><i class=\'fas fa-film\'></i></div>';">
+                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'placeholder-poster\'><i class=\'fas fa-film\'></i></div>';"
+                                     class="img-fluid">
 
                                 <!-- Placeholder si no hay imagen -->
                                 <div th:if="${(movie.posterLocalPath == null || movie.posterLocalPath.isEmpty()) && (movie.posterPath == null || movie.posterPath.isEmpty())}"

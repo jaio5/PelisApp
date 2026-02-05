@@ -47,6 +47,9 @@ public class User {
     @Column(name = "email_confirmed", nullable = false)
     private boolean emailConfirmed = false;
 
+    @Column(name = "banned", nullable = false)
+    private boolean banned = false;
+
     private Integer criticLevel = 0; // computed based on likes per review
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)

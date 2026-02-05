@@ -65,6 +65,7 @@ public class SecurityConfig {
                 auth.requestMatchers("/error", "/favicon.ico").permitAll();
                 auth.requestMatchers("/pelicula/**").permitAll();
                 auth.requestMatchers("/peliculas/**").permitAll();
+                auth.requestMatchers("/public/**").permitAll(); // Endpoints públicos para pruebas
 
                 // Endpoints de diagnóstico (solo en desarrollo)
                 if (devMode) {

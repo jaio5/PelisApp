@@ -144,4 +144,52 @@ public class ImageStorageService {
 
         return false;
     }
+
+    /**
+     * Fuerza la redescarga de una imagen, incluso si ya existe localmente.
+     * @param imageUrl URL completa de la imagen
+     * @param subfolder subcarpeta donde guardar
+     * @param filename nombre del archivo sin extensión
+     * @return ruta relativa donde se guardó la imagen, o null si falló
+     */
+    public String forceDownloadAndStoreImage(String imageUrl, String subfolder, String filename) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return null;
+        }
+
+        try {
+            // Crear directorios si no existen
+            Path storageDir = Paths.get(storageBasePath, subfolder);
+            Files.createDirectories(storageDir);
+
+            // Determinar extensión de la imagen
+            String extension = getImageExtension(imageUrl);
+            String fullFilename = filename + extension;
+
+            Path targetPath = storageDir.resolve(fullFilename);
+
+            // Descargar imagen (forzando sobreescritura)
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(imageUrl))
+                .header("User-Agent", "PelisApp/1.0")
+                .build();
+
+            HttpResponse<InputStream> response = httpClient.send(request,
+                HttpResponse.BodyHandlers.ofInputStream());
+
+            if (response.statusCode() == 200) {
+                Files.copy(response.body(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+                String relativePath = serveBasePath + "/" + subfolder + "/" + fullFilename;
+                log.info("Force downloaded image: {} -> {}", imageUrl, relativePath);
+                return relativePath;
+            } else {
+                log.warn("Failed to force download image {}: HTTP {}", imageUrl, response.statusCode());
+                return null;
+            }
+
+        } catch (IOException | InterruptedException e) {
+            log.error("Error force downloading image {}: {}", imageUrl, e.getMessage());
+            return null;
+        }
+    }
 }
