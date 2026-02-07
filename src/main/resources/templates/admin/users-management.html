@@ -93,15 +93,17 @@
         <div class="row mb-4">
             <div class="col-md-8">
                 <form method="get" class="d-flex">
-                    <input type="search"
-                           name="search"
-                           th:value="${search}"
-                           class="form-control search-box me-2"
-                           placeholder="Buscar por usuario o email...">
+                    <label>
+                        <input type="search"
+                               name="search"
+                               th:value="${search}"
+                               class="form-control search-box me-2"
+                               placeholder="Buscar por usuario o email...">
+                    </label>
                     <button class="btn btn-primary" type="submit">
                         <i class="fas fa-search"></i>
                     </button>
-                    <a th:href="@{/admin/users-management/list}" class="btn btn-secondary ms-2">
+                    <a th:href="@{/admin/users}" class="btn btn-secondary ms-2">
                         <i class="fas fa-times"></i>
                     </a>
                 </form>
@@ -193,7 +195,7 @@
         <nav th:if="${totalPages > 1}" class="mt-4">
             <ul class="pagination justify-content-center">
                 <li class="page-item" th:class="${currentPage == 0} ? 'disabled'">
-                    <a class="page-link" th:href="@{/admin/users-management/list(page=${currentPage - 1}, search=${search})}">
+                    <a class="page-link" th:href="@{/admin/users(page=${currentPage - 1}, search=${search})}">
                         <i class="fas fa-chevron-left"></i>
                     </a>
                 </li>
@@ -202,12 +204,12 @@
                     class="page-item"
                     th:class="${pageNum == currentPage} ? 'active'">
                     <a class="page-link"
-                       th:href="@{/admin/users-management/list(page=${pageNum}, search=${search})}"
+                       th:href="@{/admin/users(page=${pageNum}, search=${search})}"
                        th:text="${pageNum + 1}">1</a>
                 </li>
 
                 <li class="page-item" th:class="${currentPage == totalPages - 1} ? 'disabled'">
-                    <a class="page-link" th:href="@{/admin/users-management/list(page=${currentPage + 1}, search=${search})}">
+                    <a class="page-link" th:href="@{/admin/users(page=${currentPage + 1}, search=${search})}">
                         <i class="fas fa-chevron-right"></i>
                     </a>
                 </li>
@@ -219,7 +221,7 @@
     <script>
         function confirmEmail(userId) {
             if (confirm('¿Confirmar el email de este usuario?')) {
-                fetch(`/admin/users-management/confirm-email/${userId}`, {
+                fetch(`/api/admin/users/${userId}/confirm-email`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -235,7 +237,7 @@
 
         function banUser(userId) {
             if (confirm('¿Banear a este usuario?')) {
-                fetch(`/admin/users-management/ban/${userId}`, {
+                fetch(`/api/admin/users/${userId}/ban`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -251,7 +253,7 @@
 
         function unbanUser(userId) {
             if (confirm('¿Desbanear a este usuario?')) {
-                fetch(`/admin/users-management/unban/${userId}`, {
+                fetch(`/api/admin/users/${userId}/unban`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -267,7 +269,7 @@
 
         function deleteUser(userId, username) {
             if (confirm(`¿Eliminar permanentemente al usuario "${username}"? Esta acción no se puede deshacer.`)) {
-                fetch(`/admin/users-management/delete/${userId}`, {
+                fetch(`/api/admin/users/${userId}/delete`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

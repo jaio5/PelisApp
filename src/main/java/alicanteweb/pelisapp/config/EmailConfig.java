@@ -75,9 +75,15 @@ public class EmailConfig {
         props.put("mail.smtp.auth", smtpAuth);
         props.put("mail.smtp.starttls.enable", starttlsEnabled);
         props.put("mail.smtp.starttls.required", starttlsEnabled);
-        props.put("mail.debug", "false");
+        props.put("mail.smtp.connectiontimeout", "10000");
+        props.put("mail.smtp.timeout", "10000");
+        props.put("mail.smtp.writetimeout", "10000");
+        props.put("mail.smtp.ssl.trust", host);
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+        props.put("mail.transport.protocol", "smtp");
+        props.put("mail.debug", "true"); // Habilitar debug para diagnosticar
 
-        log.info("✅ JavaMailSender configurado correctamente");
+        log.info("✅ JavaMailSender configurado correctamente con propiedades mejoradas");
         return mailSender;
     }
 }
