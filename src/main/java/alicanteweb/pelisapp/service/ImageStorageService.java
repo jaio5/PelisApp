@@ -34,7 +34,7 @@ public class ImageStorageService {
 
     /**
      * Descarga una imagen desde una URL y la guarda localmente.
-     * @param imageUrl URL completa de la imagen (ej: https://image.tmdb.org/t/p/w500/abc.jpg)
+     * @param imageUrl URL completa de la imagen (por ejemplo, <a href="https://image.tmdb.org/t/p/w500/abc.jpg">https://image.tmdb.org/t/p/w500/abc.jpg</a>)
      * @param subfolder subcarpeta donde guardar (ej: "posters", "backdrops")
      * @param filename nombre del archivo sin extensión
      * @return ruta relativa donde se guardó la imagen, o null si falló
@@ -95,57 +95,6 @@ public class ImageStorageService {
     }
 
     /**
-     * Descarga poster de una película desde TMDB.
-     */
-    public String downloadMoviePoster(String tmdbPosterPath, Long movieId) {
-        if (tmdbPosterPath == null || movieId == null) return null;
-
-        String fullUrl = "https://image.tmdb.org/t/p/w500" +
-            (tmdbPosterPath.startsWith("/") ? tmdbPosterPath : "/" + tmdbPosterPath);
-
-        return downloadAndStoreImage(fullUrl, "posters", "movie_" + movieId);
-    }
-
-    /**
-     * Descarga backdrop de una película desde TMDB.
-     */
-    public String downloadMovieBackdrop(String tmdbBackdropPath, Long movieId) {
-        if (tmdbBackdropPath == null || movieId == null) return null;
-
-        String fullUrl = "https://image.tmdb.org/t/p/w780" +
-            (tmdbBackdropPath.startsWith("/") ? tmdbBackdropPath : "/" + tmdbBackdropPath);
-
-        return downloadAndStoreImage(fullUrl, "backdrops", "movie_" + movieId);
-    }
-
-    /**
-     * Elimina una imagen almacenada localmente.
-     */
-    public boolean deleteStoredImage(String relativePath) {
-        if (relativePath == null || !relativePath.startsWith(serveBasePath)) {
-            return false;
-        }
-
-        try {
-            // Convertir ruta relativa a absoluta
-            String pathWithoutBase = relativePath.substring(serveBasePath.length());
-            if (pathWithoutBase.startsWith("/")) pathWithoutBase = pathWithoutBase.substring(1);
-
-            Path targetPath = Paths.get(storageBasePath, pathWithoutBase);
-
-            if (Files.exists(targetPath)) {
-                Files.delete(targetPath);
-                log.info("Deleted image: {}", relativePath);
-                return true;
-            }
-        } catch (IOException e) {
-            log.error("Error deleting image {}: {}", relativePath, e.getMessage());
-        }
-
-        return false;
-    }
-
-    /**
      * Fuerza la redescarga de una imagen, incluso si ya existe localmente.
      * @param imageUrl URL completa de la imagen
      * @param subfolder subcarpeta donde guardar
@@ -191,5 +140,50 @@ public class ImageStorageService {
             log.error("Error force downloading image {}: {}", imageUrl, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Elimina archivos duplicados en la subcarpeta indicada (por hash de contenido).
+     * Devuelve el número de archivos eliminados.
+     */
+    public int deleteDuplicates(String subfolder) {
+        int deleted = 0;
+        try {
+            Path storageDir = Paths.get(storageBasePath, subfolder);
+            if (!Files.exists(storageDir) || !Files.isDirectory(storageDir)) {
+                log.warn("No existe la carpeta de imágenes: {}", storageDir);
+                return 0;
+            }
+            java.util.Map<String, Path> hashToFile = new java.util.HashMap<>();
+            java.util.Set<Path> duplicates = new java.util.HashSet<>();
+            try (java.util.stream.Stream<Path> stream = Files.list(storageDir)) {
+                for (Path file : stream.filter(Files::isRegularFile).toList()) {
+                    try (InputStream in = Files.newInputStream(file)) {
+                        byte[] content = in.readAllBytes();
+                        String hash = java.util.Base64.getEncoder().encodeToString(java.security.MessageDigest.getInstance("SHA-256").digest(content));
+                        if (hashToFile.containsKey(hash)) {
+                            duplicates.add(file);
+                        } else {
+                            hashToFile.put(hash, file);
+                        }
+                    } catch (Exception e) {
+                        log.warn("Error leyendo archivo {}: {}", file, e.getMessage());
+                    }
+                }
+            }
+            for (Path dup : duplicates) {
+                try {
+                    Files.delete(dup);
+                    deleted++;
+                    log.info("Archivo duplicado eliminado: {}", dup);
+                } catch (Exception e) {
+                    log.warn("No se pudo eliminar {}: {}", dup, e.getMessage());
+                }
+            }
+            log.info("Eliminados {} archivos duplicados en {}", deleted, storageDir);
+        } catch (Exception e) {
+            log.error("Error eliminando duplicados en {}: {}", subfolder, e.getMessage());
+        }
+        return deleted;
     }
 }

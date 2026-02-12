@@ -148,21 +148,21 @@
         function confirmEmail(btn) {
             const userId = btn.getAttribute('data-user-id');
             if (confirm('¿Confirmar email de este usuario?')) {
-                performAction('/admin/users/confirm-email/' + userId, 'POST');
+                performAction('/api/admin/users/' + userId + '/confirm-email', 'POST');
             }
         }
 
         function banUser(btn) {
             const userId = btn.getAttribute('data-user-id');
             if (confirm('¿Banear este usuario?')) {
-                performAction('/admin/users/ban/' + userId, 'POST');
+                performAction('/api/admin/users/' + userId + '/ban', 'POST');
             }
         }
 
         function unbanUser(btn) {
             const userId = btn.getAttribute('data-user-id');
             if (confirm('¿Desbanear este usuario?')) {
-                performAction('/admin/users/unban/' + userId, 'POST');
+                performAction('/api/admin/users/' + userId + '/unban', 'POST');
             }
         }
 
@@ -171,7 +171,7 @@
             const username = btn.getAttribute('data-username');
             if (confirm('¿ELIMINAR PERMANENTEMENTE al usuario "' + username + '"? Esta acción NO se puede deshacer.')) {
                 if (confirm('¿Estás COMPLETAMENTE SEGURO?')) {
-                    performAction('/admin/users/delete/' + userId, 'POST');
+                    performAction('/api/admin/users/' + userId + '/delete', 'POST');
                 }
             }
         }

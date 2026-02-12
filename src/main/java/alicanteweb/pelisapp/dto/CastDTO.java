@@ -15,5 +15,5 @@ public class CastDTO {
     private String character;
     private String profilePath;
     private String profileLocalPath;
-    private String profileUrl; // URL completa para mostrar la imagen
+    private String profileUrl;
 }

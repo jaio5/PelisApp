@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -112,23 +112,6 @@
             border-color: #e55a30;
         }
 
-        .pagination .page-link {
-            background-color: var(--secondary-color);
-            border-color: #444;
-            color: var(--text-color);
-        }
-
-        .pagination .page-link:hover {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
-            color: white;
-        }
-
-        .pagination .active .page-link {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
-        }
-
         .stats-card {
             background: linear-gradient(135deg, var(--accent-color), #e55a30);
             color: white;
@@ -165,6 +148,10 @@
             <a class="navbar-brand" href="/">
                 <i class="fas fa-film me-2"></i>PelisApp
             </a>
+            <form class="d-flex ms-3" id="searchForm" style="flex:1;max-width:400px;">
+                <input class="form-control me-2" type="search" placeholder="Buscar películas..." aria-label="Buscar" id="searchInput">
+                <button class="btn btn-outline-light" type="submit"><i class="fas fa-search"></i></button>
+            </form>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -173,11 +160,6 @@
                     <li class="nav-item">
                         <a class="nav-link active" th:href="@{/}">
                             <i class="fas fa-home me-1"></i>Inicio
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/admin/movies}">
-                            <i class="fas fa-cogs me-1"></i>Admin
                         </a>
                     </li>
                 </ul>
@@ -254,94 +236,12 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2>
                         <i class="fas fa-film me-2 text-warning"></i>
-                        <span th:if="${selectedGenre != null}" th:text="'Películas de ' + ${selectedGenre}">Películas Filtradas</span>
-                        <span th:unless="${selectedGenre != null}">Catálogo de Películas</span>
+                        <span id="catalog-title">Catálogo de Películas</span>
                     </h2>
-                    <small class="text-muted" th:if="${moviesPage != null}">
-                        Mostrando <span th:text="${moviesPage.numberOfElements}">0</span> de <span th:text="${moviesPage.totalElements}">0</span> películas
-                    </small>
+                    <small class="text-muted" id="catalog-info"></small>
                 </div>
-
-                <!-- Grid de Películas -->
-                <div class="row" th:if="${movies != null && !#lists.isEmpty(movies)}">
-                    <div class="col-md-4 col-sm-6" th:each="movie : ${movies}">
-                        <div class="movie-card">
-                            <!-- Poster de la película -->
-                            <div class="movie-poster">
-                                <!-- Imagen local si existe -->
-                                <img th:if="${movie.posterLocalPath != null && !movie.posterLocalPath.isEmpty()}"
-                                     th:src="${movie.posterLocalPath}"
-                                     th:alt="${movie.title}"
-                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'placeholder-poster\'><i class=\'fas fa-film\'></i></div>';"
-                                     class="img-fluid">
-
-                                <!-- Imagen de TMDB si no hay local -->
-                                <img th:unless="${movie.posterLocalPath != null && !movie.posterLocalPath.isEmpty()}"
-                                     th:if="${movie.posterPath != null && !movie.posterPath.isEmpty()}"
-                                     th:src="${movie.posterPath.startsWith('http') ? movie.posterPath : 'https://image.tmdb.org/t/p/w500' + movie.posterPath}"
-                                     th:alt="${movie.title}"
-                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'placeholder-poster\'><i class=\'fas fa-film\'></i></div>';"
-                                     class="img-fluid">
-
-                                <!-- Placeholder si no hay imagen -->
-                                <div th:if="${(movie.posterLocalPath == null || movie.posterLocalPath.isEmpty()) && (movie.posterPath == null || movie.posterPath.isEmpty())}"
-                                     class="placeholder-poster">
-                                    <i class="fas fa-film"></i>
-                                </div>
-                            </div>
-
-                            <!-- Información de la película -->
-                            <div class="movie-info">
-                                <a th:href="@{/pelicula/{id}(id=${movie.id})}" class="movie-title">
-                                    <span th:text="${movie.title ?: 'Título Desconocido'}">Título</span>
-                                </a>
-                                <div class="movie-year">
-                                    <i class="fas fa-calendar-alt me-1"></i>
-                                    <span th:text="${movie.releaseDate != null ? #temporals.year(movie.releaseDate) : 'Año desconocido'}">Año</span>
-                                </div>
-                                <div class="mt-2">
-                                    <span th:each="category, iterStat : ${movie.categories}" class="badge bg-secondary me-1">
-                                        <span th:text="${category.name}">Género</span>
-                                    </span>
-                                </div>
-                                <div class="mt-2">
-                                    <a th:href="@{/pelicula/{id}(id=${movie.id})}" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-eye me-1"></i>Ver Detalles
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mensaje si no hay películas -->
-                <div th:if="${movies == null || #lists.isEmpty(movies)}" class="text-center py-5">
-                    <i class="fas fa-film fa-3x text-muted mb-3"></i>
-                    <h4 class="text-muted">No hay películas disponibles</h4>
-                    <p class="text-muted">Intenta cambiar los filtros o vuelve más tarde.</p>
-                </div>
-
-                <!-- Paginación -->
-                <nav th:if="${moviesPage != null && moviesPage.totalPages > 1}" aria-label="Paginación de películas">
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item" th:classappend="${!moviesPage.hasPrevious()} ? 'disabled'">
-                            <a class="page-link" th:href="@{/(page=${moviesPage.number - 1}, genre=${selectedGenre})}" tabindex="-1">
-                                <i class="fas fa-chevron-left"></i> Anterior
-                            </a>
-                        </li>
-
-                        <li class="page-item" th:each="pageNum : ${pageNumbers}"
-                            th:classappend="${pageNum == moviesPage.number} ? 'active'">
-                            <a class="page-link" th:href="@{/(page=${pageNum}, genre=${selectedGenre})}" th:text="${pageNum + 1}">1</a>
-                        </li>
-
-                        <li class="page-item" th:classappend="${!moviesPage.hasNext()} ? 'disabled'">
-                            <a class="page-link" th:href="@{/(page=${moviesPage.number + 1}, genre=${selectedGenre})}">
-                                Siguiente <i class="fas fa-chevron-right"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
+                <div id="movies-container" class="row"></div>
+                <div id="pagination-container" class="mt-4"></div>
             </div>
         </div>
     </div>
@@ -358,5 +258,154 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+const moviesContainer = document.getElementById('movies-container');
+const paginationContainer = document.getElementById('pagination-container');
+const catalogTitle = document.getElementById('catalog-title');
+const catalogInfo = document.getElementById('catalog-info');
+
+let currentPage = 0;
+let currentGenre = null;
+
+function loadMovies(page = 0, genre = null) {
+    let url;
+    if (genre) {
+        url = `/api/movies/by-category?category=${encodeURIComponent(genre)}&page=${page}`;
+    } else {
+        url = `/api/movies?page=${page}`;
+    }
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            renderMovies(data.content);
+            renderPagination(data);
+            catalogTitle.textContent = genre ? `Películas de ${genre}` : 'Catálogo de Películas';
+            catalogInfo.textContent = `Mostrando ${data.numberOfElements} de ${data.totalElements} películas`;
+            currentPage = data.number;
+            currentGenre = genre;
+        });
+}
+
+function renderMovies(movies) {
+    moviesContainer.innerHTML = '';
+    if (!movies || movies.length === 0) {
+        moviesContainer.innerHTML = `<div class='text-center py-5'><i class='fas fa-film fa-3x text-muted mb-3'></i><h4 class='text-muted'>No hay películas disponibles</h4><p class='text-muted'>Intenta cambiar los filtros o vuelve más tarde.</p></div>`;
+        return;
+    }
+    movies.forEach(movie => {
+        moviesContainer.innerHTML += `
+        <div class="col-md-4 col-sm-6">
+            <div class="movie-card">
+                <div class="movie-poster">
+                    ${movie.posterLocalPath ? `<img src="${movie.posterLocalPath}" alt="${movie.title}" class="img-fluid">` : (movie.posterPath ? `<img src="${movie.posterPath.startsWith('http') ? movie.posterPath : 'https://image.tmdb.org/t/p/w500' + movie.posterPath}" alt="${movie.title}" class="img-fluid">` : `<div class='placeholder-poster'><i class='fas fa-film'></i></div>`)}
+                </div>
+                <div class="movie-info">
+                    <a href="/pelicula/${movie.id}" class="movie-title">${movie.title || 'Título Desconocido'}</a>
+                    <div class="movie-year"><i class="fas fa-calendar-alt me-1"></i>${getYear(movie.releaseDate)}</div>
+                    <div class="mt-2">${movie.categories && movie.categories.length ? movie.categories.map(cat => `<span class="badge bg-secondary me-1">${typeof cat === 'string' ? cat : (cat.name || cat)}</span>`).join('') : ''}</div>
+                    <div class="mt-2"><a href="/pelicula/${movie.id}" class="btn btn-primary btn-sm"><i class="fas fa-eye me-1"></i>Ver Detalles</a></div>
+                </div>
+            </div>
+        </div>`;
+    });
+}
+
+function renderPagination(data) {
+    paginationContainer.innerHTML = '';
+    if (data.totalPages <= 1) return;
+    let html = `<nav aria-label="Paginación de películas"><ul class="pagination justify-content-center">`;
+    html += `<li class="page-item${data.number === 0 ? ' disabled' : ''}"><a class="page-link" href="#" onclick="loadMovies(0, currentGenre);return false;" title="Primera página"><i class="fas fa-angle-double-left"></i></a></li>`;
+    html += `<li class="page-item${!data.hasPrevious ? ' disabled' : ''}"><a class="page-link" href="#" onclick="loadMovies(${data.number - 1}, currentGenre);return false;" tabindex="-1"><i class="fas fa-chevron-left"></i> Anterior</a></li>`;
+
+    const maxPagesToShow = 5;
+    let startPage = Math.max(0, data.number - 2);
+    let endPage = Math.min(data.totalPages - 1, data.number + 2);
+    if (data.number <= 2) {
+        endPage = Math.min(data.totalPages - 1, maxPagesToShow - 1);
+    }
+    if (data.number >= data.totalPages - 3) {
+        startPage = Math.max(0, data.totalPages - maxPagesToShow);
+    }
+
+    if (startPage > 0) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadMovies(0, currentGenre);return false;">1</a></li>`;
+        if (startPage > 1) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<li class="page-item${i === data.number ? ' active' : ''}"><a class="page-link" href="#" onclick="loadMovies(${i}, currentGenre);return false;">${i + 1}</a></li>`;
+    }
+    if (endPage < data.totalPages - 1) {
+        if (endPage < data.totalPages - 2) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadMovies(${data.totalPages - 1}, currentGenre);return false;">${data.totalPages}</a></li>`;
+    }
+
+    html += `<li class="page-item${!data.hasNext ? ' disabled' : ''}"><a class="page-link" href="#" onclick="loadMovies(${data.number + 1}, currentGenre);return false;">Siguiente <i class="fas fa-chevron-right"></i></a></li>`;
+    html += `<li class="page-item${data.number === data.totalPages - 1 ? ' disabled' : ''}"><a class="page-link" href="#" onclick="loadMovies(${data.totalPages - 1}, currentGenre);return false;" title="Última página"><i class="fas fa-angle-double-right"></i></a></li>`;
+    html += `</ul></nav>`;
+    paginationContainer.innerHTML = html;
+}
+
+function getYear(releaseDate) {
+    if (!releaseDate) return 'Año desconocido';
+    if (Array.isArray(releaseDate) && releaseDate.length > 0) return releaseDate[0];
+    if (typeof releaseDate === 'string' && releaseDate.length >= 4) return releaseDate.substring(0,4);
+    return 'Año desconocido';
+}
+
+window.loadMovies = loadMovies;
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.genre-filter a.btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Quitar la clase 'active' de todos los botones
+            document.querySelectorAll('.genre-filter a.btn').forEach(b => b.classList.remove('active'));
+            // Añadir la clase 'active' al botón pulsado
+            this.classList.add('active');
+            const genre = this.textContent.trim();
+            if (genre === 'Todas las Películas') {
+                loadMovies(0, null);
+            } else {
+                loadMovies(0, genre);
+            }
+        });
+    });
+    loadMovies(0, null);
+});
+
+const searchForm = document.getElementById('searchForm');
+const searchInput = document.getElementById('searchInput');
+let lastSearchQuery = '';
+searchForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const query = searchInput.value.trim();
+    lastSearchQuery = query;
+    if (query.length === 0) {
+        loadMovies(0, currentGenre);
+        return;
+    }
+    fetch(`/api/movies/search?query=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(data => {
+            renderMovies(data);
+            paginationContainer.innerHTML = '';
+            catalogTitle.textContent = `Resultados para "${query}"`;
+            catalogInfo.textContent = `Mostrando ${data.length} resultados`;
+            if (!data || data.length === 0) {
+                moviesContainer.innerHTML += `<div class='text-center py-3'><button class='btn btn-outline-primary mt-2' onclick='window.loadMovies(0, null);searchInput.value="";'>Volver al catálogo completo</button></div>`;
+            }
+        })
+        .catch(() => {
+            renderMovies([]);
+            paginationContainer.innerHTML = '';
+            catalogTitle.textContent = `Resultados para "${query}"`;
+            catalogInfo.textContent = `No se pudo realizar la búsqueda`;
+            moviesContainer.innerHTML += `<div class='text-center py-3'><button class='btn btn-outline-primary mt-2' onclick='window.loadMovies(0, null);searchInput.value="";'>Volver al catálogo completo</button></div>`;
+        });
+});
+    </script>
 </body>
 </html>

@@ -152,10 +152,20 @@
             <strong>Error de inicio de sesión:</strong><br>
             <span th:if="${param.error[0] == 'true'}">Credenciales incorrectas o cuenta no confirmada.</span>
             <span th:unless="${param.error[0] == 'true'}" th:text="${param.error[0]}">Error desconocido</span>
-            <br><small>Si no has confirmado tu cuenta, revisa tu email o
-            <a th:href="@{/resend-confirmation(email='')}" class="text-decoration-none" style="color: #ff6b35;">
-                reenvía el email de confirmación
-            </a></small>
+            <br><small>Si no has confirmado tu cuenta, revisa tu email.</small>
+            <div class="mt-2" id="resend-confirmation-section">
+                <button type="button" class="btn btn-warning btn-sm w-100" onclick="showResendForm()">
+                    <i class="fas fa-envelope"></i> Reenviar email de confirmación
+                </button>
+                <form id="resendForm" class="mt-2 d-none" onsubmit="return resendConfirmation(event)">
+                    <div class="input-group">
+                        <label for="resendEmail" class="visually-hidden">Email para reenviar confirmación</label>
+                        <input type="email" class="form-control" id="resendEmail" name="resendEmail" placeholder="Tu email" required aria-label="Email para reenviar confirmación">
+                        <button class="btn btn-primary" type="submit">Reenviar</button>
+                    </div>
+                    <div id="resendResult" class="mt-2"></div>
+                </form>
+            </div>
         </div>
 
         <!-- Mostrar mensaje de logout -->
@@ -165,7 +175,7 @@
         </div>
 
         <!-- Mostrar mensaje de éxito tras registro -->
-        <div th:if="${success}" class="alert alert-success" role="alert">
+        <div th:if="${success != null and !success.isEmpty()}" class="alert alert-success" role="alert">
             <i class="fas fa-check-circle me-2"></i>
             <span th:text="${success}">Mensaje de éxito</span>
         </div>
@@ -239,6 +249,34 @@
                 container.style.transform = 'translateY(0)';
             }, 100);
         });
+
+        function showResendForm() {
+            document.getElementById('resendForm').classList.remove('d-none');
+        }
+
+        function resendConfirmation(event) {
+            event.preventDefault();
+            const email = document.getElementById('resendEmail').value;
+            const resultDiv = document.getElementById('resendResult');
+            resultDiv.innerHTML = '<span class="text-info">Enviando...</span>';
+            fetch('/resend-confirmation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'email=' + encodeURIComponent(email)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.innerHTML = '<span class="text-success">' + data.message + '</span>';
+                } else {
+                    resultDiv.innerHTML = '<span class="text-danger">' + data.message + '</span>';
+                }
+            })
+            .catch(() => {
+                resultDiv.innerHTML = '<span class="text-danger">Error reenviando el email.</span>';
+            });
+            return false;
+        }
     </script>
 </body>
 </html>

@@ -243,6 +243,7 @@ public class TMDBClient {
 
     /**
      * Busca películas por título en TMDB.
+     * Este método está disponible para futuras integraciones de búsqueda avanzada.
      */
     public JsonNode searchMovie(String query) {
         log.debug("Searching TMDB for movie: {}", query);
@@ -281,11 +282,12 @@ public class TMDBClient {
     }
 
     /**
-     * Obtiene información de paginación para películas populares
+     * Obtiene información de paginación para películas populares.
+     * Método de utilidad para administración y diagnóstico.
      */
     public JsonNode getPopularInfo() {
         try {
-            JsonNode resp = webClient.get()
+            return webClient.get()
                     .uri(uriBuilder -> {
                         uriBuilder.path("/movie/popular")
                                 .queryParam("page", 1)
@@ -305,8 +307,6 @@ public class TMDBClient {
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .block(Duration.ofSeconds(10));
-
-            return resp;
         } catch (Exception e) {
             log.warn("Error getting popular info: {}", e.getMessage());
             return null;
@@ -314,11 +314,12 @@ public class TMDBClient {
     }
 
     /**
-     * Obtiene el número total de páginas disponibles para películas top rated
+     * Obtiene el número total de páginas disponibles para películas top rated.
+     * Método de utilidad para administración y diagnóstico.
      */
     public JsonNode getTopRatedInfo() {
         try {
-            JsonNode resp = webClient.get()
+            return webClient.get()
                     .uri(uriBuilder -> {
                         uriBuilder.path("/movie/top_rated")
                                 .queryParam("page", 1)
@@ -338,8 +339,6 @@ public class TMDBClient {
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .block(Duration.ofSeconds(10));
-
-            return resp;
         } catch (Exception e) {
             log.warn("Error getting top rated info: {}", e.getMessage());
             return null;

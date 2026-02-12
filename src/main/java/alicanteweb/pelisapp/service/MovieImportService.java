@@ -151,10 +151,10 @@ public class MovieImportService {
         if ((movie.getPosterPath() == null || movie.getPosterPath().isBlank()) && details.hasNonNull("poster_path")) {
             String poster = details.path("poster_path").asText(null);
             if (poster != null && !poster.isBlank()) {
-                // ImageService.downloadAndStore espera URL completa; TMDBClient/Controller suelen construirla
+                // ImageService.downloadAndSave espera URL completa; TMDBClient/Controller suelen construirla
                 String imageUrl = poster.startsWith("http") ? poster : tmdbImageBaseUrl + poster;
 
-                String stored = imageService.downloadAndStore(imageUrl);
+                String stored = imageService.downloadAndSave(imageUrl, "movie_" + movie.getTmdbId(), "posters");
                 if (stored != null) {
                     movie.setPosterLocalPath(stored);
                 } else {

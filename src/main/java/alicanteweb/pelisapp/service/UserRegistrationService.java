@@ -39,8 +39,8 @@ public class UserRegistrationService {
         try {
             // Validar datos de entrada
             ValidationResult validationResult = validateRegistrationData(request);
-            if (!validationResult.isValid()) {
-                return UserRegistrationResult.failure(validationResult.getErrorMessage());
+            if (!validationResult.valid()) {
+                return UserRegistrationResult.failure(validationResult.errorMessage());
             }
 
             // Verificar duplicados
@@ -73,41 +73,41 @@ public class UserRegistrationService {
     private ValidationResult validateRegistrationData(UserRegistrationRequest request) {
         // Validar contraseña
         ValidationResult passwordResult = validationService.validatePassword(request.password());
-        if (!passwordResult.isValid()) {
+        if (!passwordResult.valid()) {
             return passwordResult;
         }
 
         // Validar coincidencia de contraseñas
         ValidationResult passwordMatchResult = validationService
             .validatePasswordMatch(request.password(), request.confirmPassword());
-        if (!passwordMatchResult.isValid()) {
+        if (!passwordMatchResult.valid()) {
             return passwordMatchResult;
         }
 
         // Validar username
         ValidationResult usernameResult = validationService.validateUsername(request.username());
-        if (!usernameResult.isValid()) {
+        if (!usernameResult.valid()) {
             return usernameResult;
         }
 
         // Validar email
         ValidationResult emailResult = validationService.validateEmail(request.email());
-        if (!emailResult.isValid()) {
+        if (!emailResult.valid()) {
             return emailResult;
         }
 
         // Validar display name
         ValidationResult displayNameResult = validationService.validateDisplayName(request.displayName());
         log.info("[DEBUG] Validación de displayName '{}': valid={}, mensaje={}",
-                 request.displayName(), displayNameResult.isValid(), displayNameResult.getErrorMessage());
-        if (!displayNameResult.isValid()) {
+                 request.displayName(), displayNameResult.valid(), displayNameResult.errorMessage());
+        if (!displayNameResult.valid()) {
             return displayNameResult;
         }
 
         // Validar contenido sospechoso
         ValidationResult suspiciousContentResult = validationService
             .validateSuspiciousContent(request.username());
-        if (!suspiciousContentResult.isValid()) {
+        if (!suspiciousContentResult.valid()) {
             return suspiciousContentResult;
         }
 

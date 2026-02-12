@@ -33,19 +33,7 @@
         .table-dark {
             background: rgba(33, 37, 41, 0.8);
         }
-        .config-section {
-            background: rgba(55, 55, 55, 0.9);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .metric-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            color: white;
-        }
+
         .ai-status {
             padding: 10px;
             border-radius: 10px;
@@ -54,10 +42,6 @@
         .ai-status.active {
             background: rgba(40, 167, 69, 0.2);
             border: 1px solid #28a745;
-        }
-        .ai-status.inactive {
-            background: rgba(220, 53, 69, 0.2);
-            border: 1px solid #dc3545;
         }
         .log-container {
             background: #000;
@@ -154,7 +138,7 @@
                         <form id="moderationConfigForm">
                             <div class="mb-3">
                                 <label class="form-label">Umbral de Toxicidad</label>
-                                <input type="range" class="form-range" id="toxicityThreshold" min="0" max="1" step="0.1" value="0.7">
+                                <input type="range" class="form-range" id="toxicityThreshold" min="0" max="1" step="0.1" value="0.7" aria-label="Umbral de Toxicidad">
                                 <div class="d-flex justify-content-between">
                                     <small>Permisivo</small>
                                     <small id="toxicityValue">0.7</small>
@@ -164,7 +148,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Umbral de Reviews</label>
-                                <input type="range" class="form-range" id="reviewThreshold" min="0" max="1" step="0.1" value="0.5">
+                                <input type="range" class="form-range" id="reviewThreshold" min="0" max="1" step="0.1" value="0.5" aria-label="Umbral de Reviews">
                                 <div class="d-flex justify-content-between">
                                     <small>Permisivo</small>
                                     <small id="reviewValue">0.5</small>
@@ -174,12 +158,12 @@
 
                             <div class="mb-3">
                                 <label class="form-label">URL de Ollama</label>
-                                <input type="url" class="form-control" id="ollamaUrl" value="http://localhost:11434">
+                                <input type="url" class="form-control" id="ollamaUrl" value="http://localhost:11434" aria-label="URL de Ollama">
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Modelo IA</label>
-                                <select class="form-select" id="aiModel">
+                                <select class="form-select" id="aiModel" aria-label="Modelo IA">
                                     <option value="llama3" selected>Llama 3</option>
                                     <option value="llama2">Llama 2</option>
                                     <option value="mistral">Mistral</option>
@@ -238,7 +222,7 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label">Texto a analizar:</label>
-                            <textarea class="form-control" id="testText" rows="3" placeholder="Escribe aquí el texto que quieres que la IA analice..."></textarea>
+                            <textarea class="form-control" id="testText" rows="3" placeholder="Escribe aquí el texto que quieres que la IA analice..." aria-label="Texto a analizar"></textarea>
                         </div>
                         <button class="btn btn-warning w-100" onclick="testModeration()">
                             <i class="fas fa-robot me-2"></i>Analizar con IA

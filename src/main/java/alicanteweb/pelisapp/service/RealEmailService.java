@@ -66,7 +66,7 @@ public class RealEmailService implements IEmailService {
             helper.setFrom(fromEmail);
             helper.setSubject("🎬 Confirma tu cuenta en " + appName);
 
-            String confirmationUrl = baseUrl + "/confirm-account?token=" + confirmationToken;
+            String confirmationUrl = baseUrl + "/api/auth/confirm-email?token=" + confirmationToken;
             String htmlContent = createConfirmationEmailHTML(username, confirmationUrl);
             helper.setText(htmlContent, true);
 
@@ -82,7 +82,6 @@ public class RealEmailService implements IEmailService {
         }
     }
 
-    @Override
     public void sendSimpleConfirmationEmail(String toEmail, String username, String confirmationToken) {
         try {
             log.info("📧 Enviando email de confirmación simple a: {}", toEmail);
@@ -94,7 +93,7 @@ public class RealEmailService implements IEmailService {
             helper.setFrom(fromEmail);
             helper.setSubject("🎬 Confirma tu cuenta en " + appName);
 
-            String confirmationUrl = baseUrl + "/confirm-account?token=" + confirmationToken;
+            String confirmationUrl = baseUrl + "/login?token=" + confirmationToken;
             String textContent = String.format("""
                 ¡Hola %s!
                 

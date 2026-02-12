@@ -11,6 +11,8 @@ import alicanteweb.pelisapp.repository.ReviewRepository;
 import alicanteweb.pelisapp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,32 +41,48 @@ public class ReviewService {
         User user = findUserById(userId);
         Movie movie = findMovieById(movieId);
 
-        // Crear reseña primero
+        // *** MODERACIÓN SÍNCRONA ANTES DE GUARDAR ***
+        // Solo moderar si hay texto para analizar
+        if (text != null && !text.trim().isEmpty()) {
+            try {
+                log.debug("🛡️ Verificando contenido - Usuario: {}, Película: {}",
+                        user.getUsername(), movie.getTitle());
+
+                // Esto BLOQUEARÁ si el contenido es inapropiado
+                ModerationService.ModerationResult moderationResult = moderationService.moderateContentSync(text);
+
+                log.debug("✅ Contenido aprobado - Usuario: {}, Puntuación: {}",
+                        user.getUsername(), String.format("%.2f", moderationResult.toxicityScore()));
+
+            } catch (ModerationService.ContentModerationException e) {
+                log.warn("❌ Contenido rechazado - Usuario: {}, Razón: {}",
+                        user.getUsername(), e.getMessage());
+
+                // LANZAR EXCEPCIÓN PARA BLOQUEAR LA PUBLICACIÓN
+                throw new IllegalArgumentException("Tu comentario contiene contenido inapropiado y no puede ser publicado. " + e.getMessage());
+            }
+        } else {
+            log.debug("📝 Reseña sin texto - Usuario: {}, Solo estrellas: {}",
+                    user.getUsername(), stars);
+        }
+
+        // Solo si pasa la moderación, crear y guardar la reseña
         Review review = buildReview(user, movie, text, stars);
         Review savedReview = reviewRepository.save(review);
 
-        // Enviar a moderación asíncrona con Ollama
+        // Moderación asíncrona adicional para estadísticas (opcional)
         moderationService.moderateReviewAsync(savedReview)
-            .thenAccept(moderation -> {
-                if (moderation.getStatus() == alicanteweb.pelisapp.entity.CommentModeration.ModerationStatus.REJECTED) {
-                    log.warn("❌ Reseña rechazada por moderación IA - ID: {}, Usuario: {}",
-                            savedReview.getId(), user.getUsername());
-                    // Opcional: marcar la reseña como rechazada o eliminarla
-                } else {
-                    log.info("✅ Reseña aprobada o en revisión - ID: {}, Estado: {}",
-                            savedReview.getId(), moderation.getStatus());
-                }
-            })
+            .thenAccept(moderation -> log.debug("📊 Moderación asíncrona completada - ID: {}, Estado: {}",
+                        savedReview.getId(), moderation.getStatus()))
             .exceptionally(ex -> {
-                log.error("❌ Error en moderación asíncrona para reseña ID: {}: {}",
-                        savedReview.getId(), ex.getMessage());
+                log.warn("⚠️ Error en moderación asíncrona: {}", ex.getMessage());
                 return null;
             });
 
         // Actualizar logros del usuario de forma asíncrona
         userService.onUserPostedReview(user.getId());
 
-        log.info("Nueva reseña creada - Usuario: {}, Película: {}, Estrellas: {}, enviada a moderación IA",
+        log.info("✅ Reseña publicada - Usuario: {}, Película: {}, Estrellas: {}",
                 user.getUsername(), movie.getTitle(), stars);
 
         return savedReview;
@@ -92,19 +110,23 @@ public class ReviewService {
                 liker.getUsername(), reviewId, review.getLikesCount());
     }
 
+    public Page<Review> getReviewsByUsername(String username, Pageable pageable) {
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) return Page.empty();
+        return reviewRepository.findAllByUser_Id(user.getId(), pageable);
+    }
+
     /**
      * Valida la entrada de una reseña.
+     * Permite texto vacío - solo se requieren las estrellas.
      */
     private void validateReviewInput(int stars, String text) {
         if (stars < AppConstants.MIN_STARS_RATING || stars > AppConstants.MAX_STARS_RATING) {
             throw new IllegalArgumentException(AppConstants.ERROR_INVALID_RATING);
         }
 
-        if (text == null || text.trim().length() < AppConstants.MIN_REVIEW_TEXT_LENGTH) {
-            throw new IllegalArgumentException("El texto de la reseña es demasiado corto");
-        }
-
-        if (text.length() > AppConstants.MAX_REVIEW_TEXT_LENGTH) {
+        // Permitir texto vacío - solo validar si hay texto
+        if (text != null && text.length() > AppConstants.MAX_REVIEW_TEXT_LENGTH) {
             throw new IllegalArgumentException("El texto de la reseña es demasiado largo");
         }
     }

@@ -20,7 +20,6 @@ import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Servicio para cargar películas desde TMDB API
@@ -60,18 +59,17 @@ public class TMDBMovieLoaderService {
 
         validatePagesInput(pages);
 
-        MovieLoadingStats stats = new MovieLoadingStats();
-
         for (int page = 1; page <= pages; page++) {
             try {
-                processPopularMoviesPage(page, pages, stats);
+                processPopularMoviesPage(page, pages);
                 addDelayBetweenRequests();
             } catch (Exception e) {
                 handlePageError(page, e);
             }
         }
 
-        logLoadingCompletion(stats, pages);
+        log.info("{} Carga completada: {} películas procesadas, {} omitidas, {} páginas",
+                 AppConstants.LOG_FIRE_EMOJI, pages, pages, pages);
     }
 
     private void validatePagesInput(int pages) {
@@ -84,7 +82,7 @@ public class TMDBMovieLoaderService {
         }
     }
 
-    private void processPopularMoviesPage(int page, int totalPages, MovieLoadingStats stats) {
+    private void processPopularMoviesPage(int page, int totalPages) {
         log.info("{} Solicitando página {} de {} a TMDB...",
                  AppConstants.LOG_INFO_EMOJI, page, totalPages);
 
@@ -98,7 +96,7 @@ public class TMDBMovieLoaderService {
 
         if (!response.has(AppConstants.TMDB_RESULTS_KEY)) {
             log.error("{} Respuesta de TMDB sin '{}' para página {}: {}",
-                      AppConstants.LOG_ERROR_EMOJI, AppConstants.TMDB_RESULTS_KEY, page, response.toString());
+                      AppConstants.LOG_ERROR_EMOJI, AppConstants.TMDB_RESULTS_KEY, page, response);
             return;
         }
 
@@ -108,8 +106,6 @@ public class TMDBMovieLoaderService {
                  AppConstants.LOG_SUCCESS_EMOJI, page, resultsCount);
 
         int processed = processMoviesFromResponse(results);
-        stats.addProcessed(processed);
-        stats.addSkipped(resultsCount - processed);
 
         log.info("{} Página {} procesada: {} nuevas, {} omitidas (duplicadas)",
                  AppConstants.LOG_INFO_EMOJI, page, processed, resultsCount - processed);
@@ -127,22 +123,6 @@ public class TMDBMovieLoaderService {
     private void handlePageError(int page, Exception e) {
         log.error("{} Error cargando página {} de películas populares: {}",
                   AppConstants.LOG_ERROR_EMOJI, page, e.getMessage(), e);
-    }
-
-    private void logLoadingCompletion(MovieLoadingStats stats, int pages) {
-        log.info("{} Carga completada: {} películas procesadas, {} omitidas, {} páginas",
-                 AppConstants.LOG_FIRE_EMOJI, stats.getProcessed(), stats.getSkipped(), pages);
-    }
-
-    // Clase interna para estadísticas de carga
-    private static class MovieLoadingStats {
-        private int processed = 0;
-        private int skipped = 0;
-
-        void addProcessed(int count) { this.processed += count; }
-        void addSkipped(int count) { this.skipped += count; }
-        int getProcessed() { return processed; }
-        int getSkipped() { return skipped; }
     }
 
     /**
@@ -183,15 +163,13 @@ public class TMDBMovieLoaderService {
 
         for (JsonNode movieNode : resultsNode) {
             try {
-                Long tmdbId = movieNode.path("id").asLong(0);
+                long tmdbId = movieNode.path("id").asLong(0);
                 if (tmdbId == 0) continue;
 
-                // Verificar si ya existe
                 if (movieRepository.findByTmdbId(tmdbId).isPresent()) {
                     continue; // Ya existe, saltar
                 }
 
-                // Obtener detalles completos de la película
                 JsonNode movieDetails = tmdbClient.getMovieDetails(tmdbId);
                 if (movieDetails != null) {
                     Movie movie = processMovieDetails(movieDetails);
@@ -202,7 +180,6 @@ public class TMDBMovieLoaderService {
                     }
                 }
 
-                // Pausa entre requests
                 Thread.sleep(100);
 
             } catch (Exception e) {
@@ -311,22 +288,6 @@ public class TMDBMovieLoaderService {
     }
 
     /**
-     * Carga películas trending (tendencias)
-     */
-    @Transactional
-    public void loadTrendingMovies() {
-        try {
-            JsonNode response = tmdbClient.getTrending("movie", "week");
-            if (response != null && response.has("results")) {
-                processMoviesFromResponse(response.path("results"));
-                log.info("Películas trending cargadas exitosamente");
-            }
-        } catch (Exception e) {
-            log.error("Error cargando películas trending: {}", e.getMessage());
-        }
-    }
-
-    /**
      * Carga películas top rated
      */
     @Transactional
@@ -369,7 +330,6 @@ public class TMDBMovieLoaderService {
                 Long tmdbId = actorNode.path(AppConstants.TMDB_ID_KEY).asLong(0);
                 String name = actorNode.path(AppConstants.TMDB_NAME_KEY).asText();
                 String character = actorNode.path("character").asText();
-                String creditId = actorNode.path("credit_id").asText();
                 Integer order = actorNode.path("order").asInt(i);
 
                 if (tmdbId == 0 || name.isBlank()) {
@@ -410,7 +370,6 @@ public class TMDBMovieLoaderService {
         for (JsonNode crewMember : crewNode) {
             try {
                 String job = crewMember.path(AppConstants.TMDB_JOB_KEY).asText();
-                String department = crewMember.path("department").asText();
 
                 // Procesar directores y otros roles importantes de dirección
                 if (!AppConstants.TMDB_DIRECTOR_JOB.equals(job) &&
@@ -426,7 +385,6 @@ public class TMDBMovieLoaderService {
 
                 Long tmdbId = crewMember.path(AppConstants.TMDB_ID_KEY).asLong(0);
                 String name = crewMember.path(AppConstants.TMDB_NAME_KEY).asText();
-                String creditId = crewMember.path("credit_id").asText();
 
                 if (tmdbId == 0 || name.isBlank()) {
                     log.debug("Saltando crew member sin ID o nombre válido: tmdbId={}, name={}", tmdbId, name);
@@ -480,9 +438,6 @@ public class TMDBMovieLoaderService {
                         }
                     }
 
-                    // Aquí se podría añadir lógica para obtener información biográfica adicional
-                    // del actor mediante una llamada separada a la API de TMDB si es necesario
-
                     Actor savedActor = actorRepository.save(actor);
                     log.debug("✓ Actor guardado: {} (ID: {})", name, savedActor.getId());
                     return savedActor;
@@ -519,21 +474,80 @@ public class TMDBMovieLoaderService {
                         }
                     }
 
-                    // Aquí se podría añadir lógica para obtener información biográfica adicional
-                    // del director mediante una llamada separada a la API de TMDB si es necesario
-
                     Director savedDirector = directorRepository.save(director);
                     log.debug("✓ Director guardado: {} (ID: {})", name, savedDirector.getId());
                     return savedDirector;
                 });
     }
 
-    // Métodos legacy mantenidos para compatibilidad
-    private Actor findOrCreateActor(Long tmdbId, String name, String profilePath) {
-        return findOrCreateActorWithDetails(tmdbId, name, profilePath);
+    /**
+     * Redescarga imágenes SOLO de actores y directores que no tengan imagen local
+     */
+    @Transactional
+    public int redownloadCastDirectorImages() {
+        int total = 0;
+        for (Movie movie : movieRepository.findAll()) {
+            // Reparto
+            if (movie.getActors() != null) {
+                for (Actor actor : movie.getActors()) {
+                    if (actor.getProfilePath() != null && !actor.getProfilePath().isBlank()
+                        && (actor.getProfileLocalPath() == null || actor.getProfileLocalPath().isBlank())) {
+                        try {
+                            String fullUrl = tmdbClient.buildImageUrl(actor.getProfilePath());
+                            String filename = AppConstants.ACTOR_FILE_PREFIX + actor.getTmdbId();
+                            String localPath = imageStorageService.downloadAndStoreImage(
+                                fullUrl, AppConstants.PROFILES_SUBFOLDER, filename);
+                            if (localPath != null) {
+                                actor.setProfileLocalPath(localPath);
+                                actorRepository.save(actor);
+                                total++;
+                            }
+                        } catch (Exception e) {
+                            log.warn("Error redescargando imagen de actor {}: {}", actor.getName(), e.getMessage());
+                        }
+                    }
+                }
+            }
+            // Directores
+            if (movie.getDirectors() != null) {
+                for (Director director : movie.getDirectors()) {
+                    if (director.getProfilePath() != null && !director.getProfilePath().isBlank()
+                        && (director.getProfileLocalPath() == null || director.getProfileLocalPath().isBlank())) {
+                        try {
+                            String fullUrl = tmdbClient.buildImageUrl(director.getProfilePath());
+                            String filename = AppConstants.DIRECTOR_FILE_PREFIX + director.getTmdbId();
+                            String localPath = imageStorageService.downloadAndStoreImage(
+                                fullUrl, AppConstants.PROFILES_SUBFOLDER, filename);
+                            if (localPath != null) {
+                                director.setProfileLocalPath(localPath);
+                                directorRepository.save(director);
+                                total++;
+                            }
+                        } catch (Exception e) {
+                            log.warn("Error redescargando imagen de director {}: {}", director.getName(), e.getMessage());
+                        }
+                    }
+                }
+            }
+        }
+        log.info("✅ Redescarga de imágenes de reparto/director SOLO faltantes completada: {} imágenes", total);
+        return total;
     }
 
-    private Director findOrCreateDirector(Long tmdbId, String name, String profilePath) {
-        return findOrCreateDirectorWithDetails(tmdbId, name, profilePath);
+    /**
+     * Elimina fotos duplicadas de carátulas, directores y actores
+     * Devuelve el número de archivos eliminados
+     */
+    @Transactional
+    public int deleteDuplicateImages() {
+        int deleted = 0;
+        // Eliminar duplicados de carátulas
+        deleted += imageStorageService.deleteDuplicates(AppConstants.POSTERS_SUBFOLDER);
+        // Eliminar duplicados de actores
+        deleted += imageStorageService.deleteDuplicates(AppConstants.PROFILES_SUBFOLDER);
+        // Eliminar duplicados de directores
+        deleted += imageStorageService.deleteDuplicates(AppConstants.PROFILES_SUBFOLDER);
+        log.info("✅ Eliminadas {} fotos duplicadas de carátulas, actores y directores", deleted);
+        return deleted;
     }
 }

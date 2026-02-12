@@ -3,43 +3,35 @@ package alicanteweb.pelisapp.service;
 import alicanteweb.pelisapp.entity.CommentModeration;
 import alicanteweb.pelisapp.entity.Review;
 import alicanteweb.pelisapp.repository.CommentModerationRepository;
-import alicanteweb.pelisapp.repository.ReviewRepository;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import alicanteweb.pelisapp.service.moderation.ContentAnalyzer;
+import alicanteweb.pelisapp.service.moderation.OllamaClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import jakarta.annotation.PostConstruct;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Servicio de moderación usando Ollama para analizar contenido tóxico en reseñas.
- * Implementa análisis asíncrono y fallback con reglas básicas.
+ * Servicio de moderación refactorizado usando principios SOLID.
+ * Responsabilidades separadas:
+ * - ContentAnalyzer: análisis de contenido con reglas
+ * - OllamaClient: comunicación con IA
+ * - ModerationService: coordinación y persistencia
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ModerationService {
 
-    private final ReviewRepository reviewRepository;
     private final CommentModerationRepository commentModerationRepository;
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
-
-    @Value("${app.moderation.ollama.url:http://localhost:11434}")
-    private String ollamaUrl;
-
-    @Value("${app.moderation.ollama.model:llama3}")
-    private String ollamaModel;
+    private final ContentAnalyzer contentAnalyzer;
+    private final OllamaClient ollamaClient;
+    private final ModeratingAI moderatingAI;
 
     @Value("${app.moderation.toxicity.threshold:0.7}")
     private double toxicityThreshold;
@@ -50,11 +42,12 @@ public class ModerationService {
     @Value("${app.moderation.fallback.enabled:true}")
     private boolean fallbackEnabled;
 
+    @Value("${app.moderation.ia.threshold:0.7}")
+    private double iaToxicityThreshold;
+
     @PostConstruct
     public void init() {
         log.info("🛡️ ModerationService inicializado:");
-        log.info("  📍 Ollama URL: {}", ollamaUrl);
-        log.info("  🤖 Modelo: {}", ollamaModel);
         log.info("  ⚖️ Umbral toxicidad: {}", toxicityThreshold);
         log.info("  ✅ Moderación activa: {}", moderationEnabled);
         log.info("  🔄 Fallback activo: {}", fallbackEnabled);
@@ -74,242 +67,156 @@ public class ModerationService {
         log.info("🛡️ Iniciando moderación para reseña ID: {} - Usuario: {}",
                 review.getId(), review.getUser().getUsername());
 
-        CommentModeration moderation = new CommentModeration();
-        moderation.setReview(review);
-        moderation.setStatus(CommentModeration.ModerationStatus.PENDING);
-        moderation.setCreatedAt(Instant.now());
+        CommentModeration moderation = createPendingModeration(review);
 
         try {
             // Intentar moderación con Ollama
-            ModerationResult result = analyzeWithOllama(review.getText());
+            OllamaClient.OllamaAnalysisResult result = ollamaClient.analyzeContent(review.getText());
 
             moderation.setToxicityScore(result.toxicityScore());
             moderation.setModerationReason(result.reason());
             moderation.setAiProcessed(true);
 
-            if (result.toxicityScore() >= toxicityThreshold) {
-                moderation.setStatus(CommentModeration.ModerationStatus.REJECTED);
-                log.warn("❌ Reseña rechazada por IA - ID: {}, Puntuación: {:.2f}, Razón: {}",
-                        review.getId(), result.toxicityScore(), result.reason());
-            } else if (result.toxicityScore() >= 0.5) {
-                moderation.setStatus(CommentModeration.ModerationStatus.MANUAL_REVIEW);
-                log.info("⚠️ Reseña marcada para revisión manual - ID: {}, Puntuación: {:.2f}",
-                        review.getId(), result.toxicityScore());
-            } else {
-                moderation.setStatus(CommentModeration.ModerationStatus.APPROVED);
-                log.info("✅ Reseña aprobada por IA - ID: {}, Puntuación: {:.2f}",
-                        review.getId(), result.toxicityScore());
-            }
+            applyModerationDecision(moderation, result.toxicityScore(), review.getId());
 
         } catch (Exception e) {
-            log.error("❌ Error en moderación con Ollama para reseña ID: {}: {}",
+            log.warn("⚠️ Error en Ollama, usando fallback - Reseña ID: {}, Error: {}",
                     review.getId(), e.getMessage());
 
             if (fallbackEnabled) {
-                log.info("🔄 Activando moderación de respaldo para reseña ID: {}", review.getId());
-                ModerationResult fallbackResult = analyzeWithFallback(review.getText());
-                moderation.setToxicityScore(fallbackResult.toxicityScore());
-                moderation.setModerationReason("Fallback: " + fallbackResult.reason());
-                moderation.setAiProcessed(false);
-
-                if (fallbackResult.toxicityScore() >= toxicityThreshold) {
-                    moderation.setStatus(CommentModeration.ModerationStatus.REJECTED);
-                } else {
-                    moderation.setStatus(CommentModeration.ModerationStatus.APPROVED);
-                }
+                applyFallbackModeration(moderation, review.getText(), review.getId());
             } else {
-                // Sin fallback, aprobar por defecto pero marcar el error
-                moderation.setStatus(CommentModeration.ModerationStatus.APPROVED);
-                moderation.setModerationReason("Error en moderación IA: " + e.getMessage());
-                moderation.setAiProcessed(false);
+                log.error("❌ Fallback deshabilitado y Ollama falló - Rechazando por seguridad");
+                moderation.setStatus(CommentModeration.ModerationStatus.REJECTED);
+                moderation.setModerationReason("Error en sistema de moderación");
             }
         }
 
         moderation.setReviewedAt(Instant.now());
-        CommentModeration saved = commentModerationRepository.save(moderation);
-
-        log.info("💾 Moderación guardada - ID: {}, Estado: {}, Puntuación: {:.2f}",
-                saved.getId(), saved.getStatus(), saved.getToxicityScore());
-
-        return CompletableFuture.completedFuture(saved);
+        CommentModeration savedModeration = commentModerationRepository.save(moderation);
+        return CompletableFuture.completedFuture(savedModeration);
     }
 
     /**
-     * Analizar texto con Ollama usando un prompt especializado para detección de contenido tóxico.
+     * Moderación síncrona para bloquear contenido antes de publicar.
      */
-    private ModerationResult analyzeWithOllama(String text) {
+    public ModerationResult moderateContentSync(String text) {
+        if (!moderationEnabled) {
+            log.debug("Moderación deshabilitada, aprobando contenido");
+            return new ModerationResult(0.0, "Moderación deshabilitada", true);
+        }
+
         try {
-            String prompt = buildModerationPrompt(text);
+            // Intentar con Ollama primero
+            OllamaClient.OllamaAnalysisResult result = ollamaClient.analyzeContent(text);
 
-            Map<String, Object> request = new HashMap<>();
-            request.put("model", ollamaModel);
-            request.put("prompt", prompt);
-            request.put("stream", false);
-            request.put("options", Map.of(
-                "temperature", 0.1,
-                "top_p", 0.9,
-                "max_tokens", 200
-            ));
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-
-            log.debug("📤 Enviando solicitud a Ollama: {}/api/generate", ollamaUrl);
-
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                ollamaUrl + "/api/generate",
-                entity,
-                String.class
-            );
-
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                return parseOllamaResponse(response.getBody());
-            } else {
-                throw new RuntimeException("Respuesta inválida de Ollama: " + response.getStatusCode());
+            if (result.toxicityScore() >= toxicityThreshold) {
+                throw new ContentModerationException(
+                    String.format("Contenido inapropiado detectado (puntuación: %.2f). %s",
+                            result.toxicityScore(), result.reason()));
             }
 
-        } catch (Exception e) {
-            log.error("Error conectando con Ollama: {}", e.getMessage());
-            throw new RuntimeException("Error en análisis con Ollama", e);
+            return new ModerationResult(result.toxicityScore(), result.reason(), true);
+
+        } catch (OllamaClient.OllamaException e) {
+            log.warn("Ollama no disponible, usando IA local ModeratingAI para moderación síncrona");
+
+            // --- INTEGRACIÓN DE IA LOCAL ---
+            double iaScore = moderatingAI.analyzeText(text);
+            if (iaScore < iaToxicityThreshold) {
+                throw new ContentModerationException(
+                    String.format("Contenido inapropiado detectado por IA local (puntuación: %.2f).", iaScore));
+            }
+            return new ModerationResult(iaScore, "Moderación por IA local (ModeratingAI)", false);
         }
     }
 
-    /**
-     * Construir prompt especializado para moderación de contenido.
-     */
-    private String buildModerationPrompt(String text) {
-        return String.format("""
-            Eres un moderador de contenido experto. Analiza el siguiente texto de una reseña de película y determina si contiene:
-            
-            1. Lenguaje malsonante u ofensivo
-            2. Insultos o ataques personales
-            3. Discurso de odio
-            4. Contenido inapropiado
-            
-            Texto a analizar: "%s"
-            
-            Responde únicamente en formato JSON con esta estructura:
-            {
-              "toxicity_score": [número entre 0.0 y 1.0, donde 1.0 es más tóxico],
-              "is_toxic": [true/false],
-              "reason": "[explicación breve de por qué es tóxico o limpio]",
-              "detected_issues": ["lista", "de", "problemas", "detectados"]
-            }
-            
-            Respuesta:""", text);
-    }
+    // Métodos privados de apoyo
 
-    /**
-     * Parsear respuesta de Ollama y extraer puntuación de toxicidad.
-     */
-    private ModerationResult parseOllamaResponse(String response) {
-        try {
-            JsonNode jsonNode = objectMapper.readTree(response);
-            String aiResponse = jsonNode.get("response").asText();
-
-            // Buscar JSON en la respuesta
-            int jsonStart = aiResponse.indexOf("{");
-            int jsonEnd = aiResponse.lastIndexOf("}") + 1;
-
-            if (jsonStart >= 0 && jsonEnd > jsonStart) {
-                String jsonPart = aiResponse.substring(jsonStart, jsonEnd);
-                JsonNode moderationData = objectMapper.readTree(jsonPart);
-
-                double toxicityScore = moderationData.get("toxicity_score").asDouble();
-                boolean isToxic = moderationData.get("is_toxic").asBoolean();
-                String reason = moderationData.get("reason").asText();
-
-                log.debug("📊 Análisis Ollama - Puntuación: {:.2f}, Tóxico: {}, Razón: {}",
-                        toxicityScore, isToxic, reason);
-
-                return new ModerationResult(toxicityScore, reason, true);
-            } else {
-                throw new RuntimeException("No se encontró JSON válido en la respuesta de Ollama");
-            }
-
-        } catch (Exception e) {
-            log.error("Error parseando respuesta de Ollama: {}", e.getMessage());
-            throw new RuntimeException("Error interpretando respuesta de Ollama", e);
-        }
-    }
-
-    /**
-     * Sistema de fallback con reglas básicas de moderación.
-     */
-    private ModerationResult analyzeWithFallback(String text) {
-        if (text == null || text.isBlank()) {
-            return new ModerationResult(0.0, "Texto vacío", false);
-        }
-
-        String lowerText = text.toLowerCase();
-
-        // Lista de palabras prohibidas (expandida)
-        String[] badWords = {
-            "puta", "idiota", "imbecil", "estupido", "mierda", "joder", "coño",
-            "gilipollas", "cabron", "tonto", "subnormal", "retrasado", "marica",
-            "fuck", "shit", "damn", "bitch", "asshole", "motherfucker"
-        };
-
-        int badWordCount = 0;
-        StringBuilder detectedWords = new StringBuilder();
-
-        for (String badWord : badWords) {
-            if (lowerText.contains(badWord)) {
-                badWordCount++;
-                if (detectedWords.length() > 0) {
-                    detectedWords.append(", ");
-                }
-                detectedWords.append(badWord);
-            }
-        }
-
-        // Calcular puntuación basada en número de palabras prohibidas
-        double toxicityScore = Math.min(1.0, badWordCount * 0.3);
-
-        String reason = badWordCount == 0
-            ? "Contenido limpio según reglas básicas"
-            : String.format("Detectadas %d palabras inapropiadas: %s", badWordCount, detectedWords);
-
-        log.debug("🔄 Análisis Fallback - Palabras prohibidas: {}, Puntuación: {:.2f}",
-                badWordCount, toxicityScore);
-
-        return new ModerationResult(toxicityScore, reason, false);
-    }
-
-    /**
-     * Crear moderación aprobada por defecto cuando la moderación está deshabilitada.
-     */
     private CommentModeration createApprovedModeration(Review review) {
         CommentModeration moderation = new CommentModeration();
         moderation.setReview(review);
         moderation.setStatus(CommentModeration.ModerationStatus.APPROVED);
         moderation.setToxicityScore(0.0);
-        moderation.setModerationReason("Moderación deshabilitada - Aprobado automáticamente");
+        moderation.setModerationReason("Moderación deshabilitada");
         moderation.setAiProcessed(false);
         moderation.setCreatedAt(Instant.now());
         moderation.setReviewedAt(Instant.now());
+        return moderation;
+    }
 
-        return commentModerationRepository.save(moderation);
+    private CommentModeration createPendingModeration(Review review) {
+        CommentModeration moderation = new CommentModeration();
+        moderation.setReview(review);
+        moderation.setStatus(CommentModeration.ModerationStatus.PENDING);
+        moderation.setCreatedAt(Instant.now());
+        return moderation;
+    }
+
+    private void applyModerationDecision(CommentModeration moderation, double toxicityScore, Long reviewId) {
+        if (toxicityScore >= toxicityThreshold) {
+            moderation.setStatus(CommentModeration.ModerationStatus.REJECTED);
+            log.warn("❌ Reseña rechazada por IA - ID: {}, Puntuación: {}", reviewId, String.format("%.2f", toxicityScore));
+        } else if (toxicityScore >= 0.5) {
+            moderation.setStatus(CommentModeration.ModerationStatus.MANUAL_REVIEW);
+            log.info("⚠️ Reseña marcada para revisión manual - ID: {}, Puntuación: {}", reviewId, String.format("%.2f", toxicityScore));
+        } else {
+            moderation.setStatus(CommentModeration.ModerationStatus.APPROVED);
+            log.info("✅ Reseña aprobada por IA - ID: {}, Puntuación: {}", reviewId, String.format("%.2f", toxicityScore));
+        }
+    }
+
+    private void applyFallbackModeration(CommentModeration moderation, String text, Long reviewId) {
+        ContentAnalyzer.ContentAnalysisResult result = contentAnalyzer.analyze(text);
+
+        moderation.setToxicityScore(result.toxicityScore());
+        moderation.setModerationReason("Fallback: " + buildFallbackReason(result));
+        moderation.setAiProcessed(false);
+
+        if (result.toxicityScore() >= toxicityThreshold) {
+            moderation.setStatus(CommentModeration.ModerationStatus.REJECTED);
+            log.warn("❌ Reseña rechazada por Fallback - ID: {}, Puntuación: {}", reviewId, String.format("%.2f", result.toxicityScore()));
+        } else if (result.toxicityScore() >= 0.4) {
+            moderation.setStatus(CommentModeration.ModerationStatus.MANUAL_REVIEW);
+            log.info("⚠️ Reseña marcada para revisión manual por Fallback - ID: {}", reviewId);
+        } else {
+            moderation.setStatus(CommentModeration.ModerationStatus.APPROVED);
+            log.info("✅ Reseña aprobada por Fallback - ID: {}", reviewId);
+        }
+    }
+
+    private String buildFallbackReason(ContentAnalyzer.ContentAnalysisResult result) {
+        return result.badWordCount() == 0
+                ? "Contenido limpio según reglas estrictas"
+                : String.format("CONTENIDO INAPROPIADO detectado - %d problemas: %s",
+                        result.badWordCount(), result.detectedWords());
     }
 
     /**
-     * Verificar si Ollama está disponible.
+     * Verifica si Ollama está disponible para moderación.
+     * Método de conveniencia para el controlador de administración.
      */
     public boolean isOllamaAvailable() {
         try {
-            ResponseEntity<String> response = restTemplate.getForEntity(
-                ollamaUrl + "/api/version", String.class);
-            return response.getStatusCode() == HttpStatus.OK;
+            ollamaClient.analyzeContent("test");
+            return true;
         } catch (Exception e) {
-            log.debug("Ollama no disponible en {}: {}", ollamaUrl, e.getMessage());
             return false;
         }
     }
 
-    /**
-     * Record para encapsular el resultado de moderación.
-     */
-    private record ModerationResult(double toxicityScore, String reason, boolean ollamaUsed) {}
+    // Records y excepciones
+
+    public record ModerationResult(double toxicityScore, String reason, boolean aiProcessed) {
+        // Método de compatibilidad
+        public boolean ollamaUsed() {
+            return aiProcessed;
+        }
+    }
+
+    public static class ContentModerationException extends RuntimeException {
+        public ContentModerationException(String message) {
+            super(message);
+        }
+    }
 }

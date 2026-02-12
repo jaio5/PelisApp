@@ -6,7 +6,7 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Configuración para servir archivos estáticos de imágenes
+ * Configuración para servir archivos estáticos de imágenes y videos
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -17,16 +17,29 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${app.images.serve-base:/images}")
     private String imagesServeBase;
 
+    @Value("${app.movies.storage-path:./data/movies}")
+    private String moviesStoragePath;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // Configurar para servir imágenes desde el directorio local
-        String resourceLocation = "file:" + imagesStoragePath + "/";
-        String pathPattern = imagesServeBase + "/**";
+        String imageResourceLocation = "file:" + imagesStoragePath + "/";
+        String imagePathPattern = imagesServeBase + "/**";
 
-        registry.addResourceHandler(pathPattern)
-                .addResourceLocations(resourceLocation)
+        registry.addResourceHandler(imagePathPattern)
+                .addResourceLocations(imageResourceLocation)
                 .setCachePeriod(3600); // Cache por 1 hora
 
-        System.out.println("✅ Configurado servido de imágenes: " + pathPattern + " -> " + resourceLocation);
+        // Configurar para servir archivos de video (pero solo para acceso directo simple)
+        // Los endpoints de descarga/streaming con range están en MovieFileController
+        String movieResourceLocation = "file:" + moviesStoragePath + "/";
+        String moviePathPattern = "/video/**";
+
+        registry.addResourceHandler(moviePathPattern)
+                .addResourceLocations(movieResourceLocation)
+                .setCachePeriod(0); // Sin cache para videos
+
+        System.out.println("✅ Configurado servido de imágenes: " + imagePathPattern + " -> " + imageResourceLocation);
+        System.out.println("✅ Configurado servido de videos: " + moviePathPattern + " -> " + movieResourceLocation);
     }
 }

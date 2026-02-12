@@ -62,7 +62,6 @@ public class SecurityConfig {
                 auth.requestMatchers("/confirm-account/**", "/resend-confirmation", "/request-confirmation").permitAll();
                 auth.requestMatchers("/api/auth/**").permitAll();
                 auth.requestMatchers("/css/**", "/js/**", "/images/**").permitAll();
-                auth.requestMatchers("/error", "/favicon.ico").permitAll();
                 auth.requestMatchers("/pelicula/**").permitAll();
                 auth.requestMatchers("/peliculas/**").permitAll();
                 auth.requestMatchers("/public/**").permitAll(); // Endpoints públicos para pruebas
@@ -134,7 +133,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:*", "https://localhost:*"));
+        // Permite localhost y emuladores Android
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+                "http://localhost:*",
+                "https://localhost:*",
+                "http://10.0.2.2:*",
+                "http://192.168.*:*"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

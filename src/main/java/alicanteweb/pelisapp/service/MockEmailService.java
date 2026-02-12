@@ -28,9 +28,4 @@ public class MockEmailService implements IEmailService {
         log.info("   🎫 Token: {}...", confirmationToken.substring(0, Math.min(20, confirmationToken.length())));
         log.info("💡 En desarrollo: Haz clic en la URL de arriba para confirmar la cuenta");
     }
-
-    @Override
-    public void sendSimpleConfirmationEmail(String toEmail, String username, String confirmationToken) {
-        sendConfirmationEmail(toEmail, username, confirmationToken);
-    }
 }

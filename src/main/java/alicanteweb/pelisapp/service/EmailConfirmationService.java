@@ -134,31 +134,16 @@ public class EmailConfirmationService {
     }
 
     /**
-     * Resultado inmutable de una operación de confirmación por email.
-     */
-    public static class EmailConfirmationResult {
-        private final boolean success;
-        private final String message;
-
-        private EmailConfirmationResult(boolean success, String message) {
-            this.success = success;
-            this.message = message;
-        }
+         * Resultado inmutable de una operación de confirmación por email.
+         */
+        public record EmailConfirmationResult(boolean success, String message) {
 
         public static EmailConfirmationResult success(String message) {
-            return new EmailConfirmationResult(true, message);
-        }
+                return new EmailConfirmationResult(true, message);
+            }
 
-        public static EmailConfirmationResult failure(String message) {
-            return new EmailConfirmationResult(false, message);
+            public static EmailConfirmationResult failure(String message) {
+                return new EmailConfirmationResult(false, message);
+            }
         }
-
-        public boolean isSuccess() {
-            return success;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-    }
 }

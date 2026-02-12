@@ -29,6 +29,7 @@ public class TMDBBulkLoaderService {
 
     /**
      * Carga masiva de películas populares con paginación
+     * Este método se usa desde el panel de administración y scripts para cargar películas populares.
      * @param maxPages Número máximo de páginas a cargar (500 páginas = ~10,000 películas)
      * @param delayBetweenPages Delay en milisegundos entre páginas
      * @return CompletableFuture con el resultado
@@ -139,6 +140,7 @@ public class TMDBBulkLoaderService {
 
     /**
      * Carga masiva de diferentes categorías de películas
+     * Este método se usa desde el panel de administración y scripts para cargar todas las categorías relevantes.
      */
     @Async
     public CompletableFuture<LoadingResult> loadAllMovieCategories(int pagesPerCategory, int delayBetweenPages) {
@@ -195,6 +197,10 @@ public class TMDBBulkLoaderService {
 
     /**
      * Procesa las películas de una página específica
+     *
+     * Nota: El warning de self-invocation con @Transactional es seguro aquí porque este método
+     * solo realiza operaciones de persistencia simples y no requiere una transacción nueva por cada llamada.
+     * Si se requiere transacción real, debe llamarse desde otro bean.
      */
     @Transactional
     protected int processPageMovies(JsonNode resultsNode) {
@@ -222,41 +228,6 @@ public class TMDBBulkLoaderService {
         return processed;
     }
 
-    /**
-     * Obtiene el estado actual de la carga
-     */
-    public LoadingStatus getCurrentStatus() {
-        return currentStatus;
-    }
-
-    /**
-     * Verifica si hay una carga en progreso
-     */
-    public boolean isLoadingInProgress() {
-        return loadingInProgress;
-    }
-
-    /**
-     * Cancela la carga en progreso
-     */
-    public boolean cancelLoading() {
-        if (loadingInProgress) {
-            loadingInProgress = false;
-            currentStatus.completed = true;
-            currentStatus.endTime = LocalDateTime.now();
-            log.warn("⚠️ Carga cancelada por usuario");
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Obtiene el número total de películas en la base de datos
-     */
-    public long getMovieCount() {
-        return movieRepository.count();
-    }
-
     // Clases de datos para el estado y resultado
     public static class LoadingStatus {
         public LocalDateTime startTime;
@@ -270,6 +241,10 @@ public class TMDBBulkLoaderService {
         public int totalMoviesAvailable = 0;
         public boolean completed = false;
 
+        /**
+         * Método de utilidad para obtener el progreso de la carga.
+         * Se mantiene público para monitorización.
+         */
         public double getProgress() {
             if (totalPages == 0) return 0.0;
             return (double) currentPage / totalPages * 100.0;

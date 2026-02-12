@@ -128,31 +128,17 @@ public class UserValidationService {
     }
 
     /**
-     * Resultado inmutable de una validación.
-     */
-    public static class ValidationResult {
-        private final boolean valid;
-        private final String errorMessage;
-
-        private ValidationResult(boolean valid, String errorMessage) {
-            this.valid = valid;
-            this.errorMessage = errorMessage;
-        }
+         * Resultado inmutable de una validación.
+         */
+        public record ValidationResult(boolean valid, String errorMessage) {
 
         public static ValidationResult success() {
-            return new ValidationResult(true, null);
-        }
+                return new ValidationResult(true, null);
+            }
 
-        public static ValidationResult failure(String errorMessage) {
-            return new ValidationResult(false, errorMessage);
-        }
+            public static ValidationResult failure(String errorMessage) {
+                return new ValidationResult(false, errorMessage);
+            }
 
-        public boolean isValid() {
-            return valid;
         }
-
-        public String getErrorMessage() {
-            return errorMessage;
-        }
-    }
 }

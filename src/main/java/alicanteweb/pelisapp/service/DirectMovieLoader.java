@@ -21,12 +21,10 @@ import java.util.Map;
 
 /**
  * Servicio para carga directa de películas desde TMDB
- *
  * Responsabilidades:
  * - Obtener listas de películas populares de TMDB
  * - Delegar la carga detallada a TMDBMovieLoaderService
  * - Gestionar el flujo de paginación
- *
  * Aplica principios SOLID:
  * - SRP: Una sola responsabilidad (coordinación de carga)
  * - DIP: Depende de abstracciones (repositorio y servicio)
@@ -121,7 +119,8 @@ public class DirectMovieLoader {
                 url,
                 HttpMethod.GET,
                 httpEntity,
-                new ParameterizedTypeReference<Map<String, Object>>() {}
+                    new ParameterizedTypeReference<>() {
+                    }
             );
         } catch (RestClientException e) {
             log.error("{} Error llamando a TMDB API: {}", AppConstants.LOG_ERROR_EMOJI, e.getMessage());

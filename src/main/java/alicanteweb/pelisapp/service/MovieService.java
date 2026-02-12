@@ -3,7 +3,9 @@ package alicanteweb.pelisapp.service;
 import alicanteweb.pelisapp.dto.CastDTO;
 import alicanteweb.pelisapp.dto.CrewDTO;
 import alicanteweb.pelisapp.dto.MovieDetailsDTO;
+import alicanteweb.pelisapp.dto.MovieListDTO;
 import alicanteweb.pelisapp.entity.Actor;
+import alicanteweb.pelisapp.entity.CategoryEntity;
 import alicanteweb.pelisapp.entity.Director;
 import alicanteweb.pelisapp.entity.Movie;
 import alicanteweb.pelisapp.repository.ActorRepository;
@@ -14,6 +16,9 @@ import alicanteweb.pelisapp.tmdb.TMDBClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -36,16 +41,33 @@ public class MovieService {
     private final ImageStorageService imageStorageService;
 
     public MovieDetailsDTO getCombinedByMovieId(Long id) {
-        // Usar el método que carga explícitamente actores y directores
         Optional<Movie> opt = movieRepository.findByIdWithCastAndDirectors(id);
         if (opt.isEmpty()) return null;
-        Movie movie = opt.get();
 
+        Movie movie = opt.get();
         log.debug("Obteniendo detalles combinados para película: {} (ID: {}, TMDB ID: {})",
                  movie.getTitle(), movie.getId(), movie.getTmdbId());
-        log.debug("Actores cargados: {}, Directores cargados: {}",
-                 movie.getActors().size(), movie.getDirectors().size());
 
+        MovieDetailsDTO dto = createBaseMovieDTO(movie);
+
+        // Cargar reparto y directores
+        List<CastDTO> castMembers = loadCastMembers(movie);
+        List<CrewDTO> directors = loadDirectors(movie);
+
+        // Si no hay datos en BD, usar fallback con TMDB API
+        if (castMembers.isEmpty() || directors.isEmpty()) {
+            loadMissingDataFromTMDB(movie, castMembers, directors);
+        }
+
+        configureDTOWithCastData(dto, castMembers, directors);
+
+        log.info("Detalles preparados para '{}': {} actores, {} directores",
+                 movie.getTitle(), castMembers.size(), directors.size());
+
+        return dto;
+    }
+
+    private MovieDetailsDTO createBaseMovieDTO(Movie movie) {
         MovieDetailsDTO dto = new MovieDetailsDTO();
         dto.setId(movie.getId());
         dto.setTmdbId(movie.getTmdbId());
@@ -53,100 +75,127 @@ public class MovieService {
         dto.setOverview(movie.getDescription());
         dto.setPosterPath(movie.getPosterPath() != null ? movie.getPosterPath() : movie.getPosterLocalPath());
         dto.setReleaseDate(movie.getReleaseDate() != null ? movie.getReleaseDate().toString() : null);
+        return dto;
+    }
 
-        // PRIORIDAD 1: Usar datos ya cargados en la base de datos
+    private List<CastDTO> loadCastMembers(Movie movie) {
         List<CastDTO> castMembers = new ArrayList<>();
-        List<CrewDTO> directors = new ArrayList<>();
 
-        // Obtener actores desde la base de datos (más confiable)
         if (!movie.getActors().isEmpty()) {
             log.debug("Usando actores desde BD: {} actores encontrados", movie.getActors().size());
             for (Actor actor : movie.getActors()) {
-                CastDTO castDto = new CastDTO();
-                castDto.setTmdbId(actor.getTmdbId());
-                castDto.setName(actor.getName());
-                castDto.setCharacter("Reparto Principal"); // Mejorable en futuras versiones
-                castDto.setProfilePath(actor.getProfilePath());
-                castDto.setProfileLocalPath(actor.getProfileLocalPath());
-                castDto.setProfileUrl(getImageUrl(actor.getProfileLocalPath(), actor.getProfilePath()));
+                CastDTO castDto = createCastDTO(actor);
                 castMembers.add(castDto);
             }
             log.info("✅ Cargados {} actores desde BD para '{}'", castMembers.size(), movie.getTitle());
         }
 
-        // Obtener directores desde la base de datos (más confiable)
+        return castMembers;
+    }
+
+    private CastDTO createCastDTO(Actor actor) {
+        CastDTO castDto = new CastDTO();
+        castDto.setTmdbId(actor.getTmdbId());
+        castDto.setName(actor.getName());
+        castDto.setCharacter("Reparto Principal"); // Mejorable en futuras versiones
+        castDto.setProfilePath(actor.getProfilePath());
+        castDto.setProfileLocalPath(actor.getProfileLocalPath());
+        castDto.setProfileUrl(getImageUrl(actor.getProfileLocalPath(), actor.getProfilePath()));
+        return castDto;
+    }
+
+    private List<CrewDTO> loadDirectors(Movie movie) {
+        List<CrewDTO> directors = new ArrayList<>();
+
         if (!movie.getDirectors().isEmpty()) {
             log.debug("Usando directores desde BD: {} directores encontrados", movie.getDirectors().size());
             for (Director director : movie.getDirectors()) {
-                CrewDTO directorDto = new CrewDTO();
-                directorDto.setTmdbId(director.getTmdbId());
-                directorDto.setName(director.getName());
-                directorDto.setJob("Director");
-                directorDto.setDepartment("Directing");
-                directorDto.setProfilePath(director.getProfilePath());
-                directorDto.setProfileLocalPath(director.getProfileLocalPath());
-                directorDto.setProfileUrl(getImageUrl(director.getProfileLocalPath(), director.getProfilePath()));
+                CrewDTO directorDto = createDirectorDTO(director);
                 directors.add(directorDto);
             }
             log.info("✅ Cargados {} directores desde BD para '{}'", directors.size(), movie.getTitle());
         }
 
-        // PRIORIDAD 2: Si no hay datos en BD, intentar TMDB API como fallback
-        if (castMembers.isEmpty() || directors.isEmpty()) {
-            log.debug("Datos incompletos en BD, intentando fallback con TMDB API...");
+        return directors;
+    }
 
-            JsonNode details = null;
-            if (movie.getTmdbId() != null) {
-                try {
-                    details = tmdbClient.getMovieDetails(movie.getTmdbId());
-                } catch (Exception e) {
-                    log.warn("Error obteniendo detalles de TMDB para película {}: {}", movie.getTmdbId(), e.getMessage());
-                }
+    private CrewDTO createDirectorDTO(Director director) {
+        CrewDTO directorDto = new CrewDTO();
+        directorDto.setTmdbId(director.getTmdbId());
+        directorDto.setName(director.getName());
+        directorDto.setJob("Director");
+        directorDto.setDepartment("Directing");
+        directorDto.setProfilePath(director.getProfilePath());
+        directorDto.setProfileLocalPath(director.getProfileLocalPath());
+        directorDto.setProfileUrl(getImageUrl(director.getProfileLocalPath(), director.getProfilePath()));
+        return directorDto;
+    }
+
+    private void loadMissingDataFromTMDB(Movie movie, List<CastDTO> castMembers, List<CrewDTO> directors) {
+        log.debug("Datos incompletos en BD, intentando fallback con TMDB API...");
+
+        JsonNode details = getTMDBMovieDetails(movie.getTmdbId());
+        if (details != null && details.has("credits")) {
+            JsonNode credits = details.path("credits");
+
+            if (castMembers.isEmpty() && credits.has("cast")) {
+                loadCastFromTMDB(credits.path("cast"), castMembers);
             }
 
-            if (details != null && details.has("credits")) {
-                JsonNode credits = details.path("credits");
-
-                // Solo agregar actores si no hay en BD
-                if (castMembers.isEmpty() && credits.has("cast")) {
-                    log.debug("Cargando actores desde TMDB API como fallback");
-                    int limit = 10;
-                    int count = 0;
-
-                    for (JsonNode c : credits.path("cast")) {
-                        if (count++ >= limit) break;
-
-                        CastDTO castDto = new CastDTO();
-                        castDto.setTmdbId(c.path("id").canConvertToLong() ? c.path("id").asLong() : null);
-                        castDto.setName(c.path("name").asText());
-                        castDto.setCharacter(c.path("character").asText());
-                        castDto.setProfilePath(c.path("profile_path").asText(null));
-                        castDto.setProfileUrl(getImageUrl(null, castDto.getProfilePath()));
-                        castMembers.add(castDto);
-                    }
-                }
-
-                // Solo agregar directores si no hay en BD
-                if (directors.isEmpty() && credits.has("crew")) {
-                    log.debug("Cargando directores desde TMDB API como fallback");
-                    for (JsonNode c : credits.path("crew")) {
-                        String job = c.path("job").asText();
-                        if ("Director".equalsIgnoreCase(job)) {
-                            CrewDTO directorDto = new CrewDTO();
-                            directorDto.setTmdbId(c.path("id").canConvertToLong() ? c.path("id").asLong() : null);
-                            directorDto.setName(c.path("name").asText());
-                            directorDto.setJob(job);
-                            directorDto.setDepartment(c.path("department").asText());
-                            directorDto.setProfilePath(c.path("profile_path").asText(null));
-                            directorDto.setProfileUrl(getImageUrl(null, directorDto.getProfilePath()));
-                            directors.add(directorDto);
-                        }
-                    }
-                }
+            if (directors.isEmpty() && credits.has("crew")) {
+                loadDirectorsFromTMDB(credits.path("crew"), directors);
             }
         }
+    }
 
-        // Configurar listas en el DTO
+    private JsonNode getTMDBMovieDetails(Long tmdbId) {
+        if (tmdbId == null) return null;
+
+        try {
+            return tmdbClient.getMovieDetails(tmdbId);
+        } catch (Exception e) {
+            log.warn("Error obteniendo detalles de TMDB para película {}: {}", tmdbId, e.getMessage());
+            return null;
+        }
+    }
+
+    private void loadCastFromTMDB(JsonNode castNode, List<CastDTO> castMembers) {
+        log.debug("Cargando actores desde TMDB API como fallback");
+        int limit = 10;
+        int count = 0;
+
+        for (JsonNode c : castNode) {
+            if (count++ >= limit) break;
+
+            CastDTO castDto = new CastDTO();
+            castDto.setTmdbId(c.path("id").canConvertToLong() ? c.path("id").asLong() : null);
+            castDto.setName(c.path("name").asText());
+            castDto.setCharacter(c.path("character").asText());
+            castDto.setProfilePath(c.path("profile_path").asText(null));
+            castDto.setProfileUrl(getImageUrl(null, castDto.getProfilePath()));
+            castMembers.add(castDto);
+        }
+    }
+
+    private void loadDirectorsFromTMDB(JsonNode crewNode, List<CrewDTO> directors) {
+        log.debug("Cargando directores desde TMDB API como fallback");
+
+        for (JsonNode c : crewNode) {
+            String job = c.path("job").asText();
+            if ("Director".equalsIgnoreCase(job)) {
+                CrewDTO directorDto = new CrewDTO();
+                directorDto.setTmdbId(c.path("id").canConvertToLong() ? c.path("id").asLong() : null);
+                directorDto.setName(c.path("name").asText());
+                directorDto.setJob(job);
+                directorDto.setDepartment(c.path("department").asText());
+                directorDto.setProfilePath(c.path("profile_path").asText(null));
+                directorDto.setProfileUrl(getImageUrl(null, directorDto.getProfilePath()));
+                directors.add(directorDto);
+            }
+        }
+    }
+
+    private void configureDTOWithCastData(MovieDetailsDTO dto, List<CastDTO> castMembers, List<CrewDTO> directors) {
         dto.setCastMembers(castMembers);
         dto.setDirectors(directors);
 
@@ -156,11 +205,6 @@ public class MovieService {
                 .map(CastDTO::getName)
                 .collect(Collectors.toList());
         dto.setCast(cast);
-
-        log.info("Detalles preparados para '{}': {} actores, {} directores",
-                 movie.getTitle(), castMembers.size(), directors.size());
-
-        return dto;
     }
 
     public MovieDetailsDTO getCombinedByTmdbId(Long tmdbId) {
@@ -187,5 +231,43 @@ public class MovieService {
         // Sin imagen disponible
         return null;
     }
-}
 
+
+    public Page<MovieListDTO> getAllMovies(Pageable pageable) {
+        Page<Movie> moviePage = movieRepository.findAll(pageable);
+        List<MovieListDTO> movieDTOs = moviePage.getContent().stream().map(movie -> {
+            MovieListDTO dto = new MovieListDTO();
+            dto.setId(movie.getId());
+            dto.setTmdbId(movie.getTmdbId());
+            dto.setTitle(movie.getTitle());
+            dto.setDescription(movie.getDescription());
+            dto.setPosterPath(movie.getPosterPath());
+            dto.setPosterLocalPath(movie.getPosterLocalPath());
+            dto.setReleaseDate(movie.getReleaseDate());
+            dto.setRuntimeMinutes(movie.getRuntimeMinutes());
+            List<String> categories = movie.getCategories().stream().map(CategoryEntity::getName).toList();
+            dto.setCategories(categories);
+            return dto;
+        }).toList();
+        return new org.springframework.data.domain.PageImpl<>(movieDTOs, pageable, moviePage.getTotalElements());
+    }
+
+    public Page<MovieListDTO> getMoviesByCategory(String category, Pageable pageable) {
+        Page<Movie> moviePage = movieRepository.findByCategories_Name(category, pageable);
+        List<MovieListDTO> movieDTOs = moviePage.getContent().stream().map(movie -> {
+            MovieListDTO dto = new MovieListDTO();
+            dto.setId(movie.getId());
+            dto.setTmdbId(movie.getTmdbId());
+            dto.setTitle(movie.getTitle());
+            dto.setDescription(movie.getDescription());
+            dto.setPosterPath(movie.getPosterPath());
+            dto.setPosterLocalPath(movie.getPosterLocalPath());
+            dto.setReleaseDate(movie.getReleaseDate());
+            dto.setRuntimeMinutes(movie.getRuntimeMinutes());
+            List<String> categories = movie.getCategories().stream().map(CategoryEntity::getName).toList();
+            dto.setCategories(categories);
+            return dto;
+        }).toList();
+        return new PageImpl<>(movieDTOs, pageable, moviePage.getTotalElements());
+    }
+}

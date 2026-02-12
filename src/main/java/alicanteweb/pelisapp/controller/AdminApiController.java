@@ -1,14 +1,13 @@
 package alicanteweb.pelisapp.controller;
 
-import alicanteweb.pelisapp.dto.*;
+import alicanteweb.pelisapp.dto.ConnectionStatus;
 import alicanteweb.pelisapp.entity.*;
 import alicanteweb.pelisapp.repository.*;
 import alicanteweb.pelisapp.service.*;
-import alicanteweb.pelisapp.tmdb.TMDBClient;
-import com.fasterxml.jackson.databind.JsonNode;
-import jakarta.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -25,17 +24,19 @@ import java.util.Optional;
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'ROLE_ADMIN', 'Administrador')")
 public class AdminApiController {
 
     // Services - Solo los esenciales
     private final TMDBMovieLoaderService tmdbMovieLoaderService;
     private final ModerationService moderationService;
+    private final SystemHealthService systemHealthService;
+    private final AuthService authService; // Agregado para búsqueda de usuarios
+    private final MoviePosterRedownloadService moviePosterRedownloadService;
 
     // Repositories
     private final MovieRepository movieRepository;
     private final UserRepository userRepository;
-    private final ReviewRepository reviewRepository;
     private final CommentModerationRepository commentModerationRepository;
 
     // ============= USER MANAGEMENT =============
@@ -161,7 +162,7 @@ public class AdminApiController {
 
             // Verificar que no sea un superadmin
             boolean isSuperAdmin = user.getRoles().stream()
-                    .anyMatch(role -> "SUPERADMIN".equals(role.getName()));
+                .anyMatch(role -> "ROLE_SUPERADMIN".equals(role.getName()));
 
             if (isSuperAdmin) {
                 return ResponseEntity.badRequest().body("No se puede eliminar un superadmin");
@@ -176,6 +177,58 @@ public class AdminApiController {
             log.error("Error eliminando usuario {}: {}", userId, e.getMessage());
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
+    }
+
+    /**
+     * Buscar usuario por email (admin).
+     */
+    @GetMapping("/users/search/email")
+    public ResponseEntity<List<User>> searchUsersByEmail(@RequestParam String value) {
+        try {
+            List<User> users = userRepository.findByEmailContainingIgnoreCase(value, PageRequest.of(0, 10)).getContent();
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            log.error("Error buscando usuarios por email: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Buscar usuario por nombre de usuario (admin).
+     */
+    @GetMapping("/users/search/username")
+    public ResponseEntity<List<User>> searchUsersByUsername(@RequestParam String value) {
+        try {
+            List<User> users = userRepository.findByUsernameContainingIgnoreCase(value, PageRequest.of(0, 10)).getContent();
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            log.error("Error buscando usuarios por username: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Buscar usuario por email (admin).
+     */
+    @GetMapping("/users/by-email")
+    public ResponseEntity<User> findUserByEmail(@RequestParam String email) {
+        User user = authService.findUserByEmail(email);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(user);
+    }
+
+    /**
+     * Buscar usuario por nombre de usuario (admin).
+     */
+    @GetMapping("/users/by-username")
+    public ResponseEntity<User> findUserByUsername(@RequestParam String username) {
+        User user = authService.findUserByUsername(username);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(user);
     }
 
     // ============= TMDB INTEGRATION =============
@@ -231,8 +284,8 @@ public class AdminApiController {
 
     @PostMapping("/tmdb/bulk-load")
     public ResponseEntity<Map<String, Object>> bulkLoadMovies(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit) {
+            @RequestParam(defaultValue = "1") int page
+    ) {
         try {
             // Usar método existente
             tmdbMovieLoaderService.loadPopularMovies(Math.min(page, 5));
@@ -259,10 +312,13 @@ public class AdminApiController {
 
             for (Movie movie : movies) {
                 try {
-                    if (movie.getTmdbId() != null) {
-                        // Método simplificado - no disponible actualmente
-                        log.info("Procesando poster para película ID: {}", movie.getId());
-                        reloaded++;
+                    if (movie.getTmdbId() != null && (movie.getPosterLocalPath() == null || movie.getPosterLocalPath().isBlank())) {
+                        boolean ok = moviePosterRedownloadService.redownloadMoviePoster(movie);
+                        if (ok) {
+                            reloaded++;
+                        } else {
+                            errors++;
+                        }
                     }
                 } catch (Exception e) {
                     log.error("Error recargando poster para película {}: {}", movie.getId(), e.getMessage());
@@ -351,9 +407,7 @@ public class AdminApiController {
     }
 
     @GetMapping("/moderation/pending")
-    public ResponseEntity<List<CommentModeration>> getPendingModerations(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+    public ResponseEntity<List<CommentModeration>> getPendingModerations() {
 
         // Simplificado - retornar lista vacía por ahora
         return ResponseEntity.ok(List.of());
@@ -426,6 +480,72 @@ public class AdminApiController {
             error.put("success", false);
             error.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    // ============= SYSTEM HEALTH =============
+
+    @GetMapping("/system/health")
+    public ResponseEntity<Map<String, ConnectionStatus>> getSystemHealth() {
+        try {
+            log.info("🔍 Verificando estado de todas las conexiones del sistema");
+            Map<String, ConnectionStatus> healthStatus = systemHealthService.checkAllConnections();
+            return ResponseEntity.ok(healthStatus);
+        } catch (Exception e) {
+            log.error("❌ Error verificando estado del sistema: {}", e.getMessage());
+            return ResponseEntity.status(500).body(Map.of(
+                "error", ConnectionStatus.builder()
+                    .connected(false)
+                    .message("Error verificando estado del sistema: " + e.getMessage())
+                    .responseTimeMs(0L)
+                    .lastChecked(java.time.Instant.now())
+                    .build()
+            ));
+        }
+    }
+
+    @GetMapping("/system/health/{service}")
+    public ResponseEntity<ConnectionStatus> getServiceHealth(@PathVariable String service) {
+        try {
+            log.info("🔍 Verificando estado del servicio: {}", service);
+
+            ConnectionStatus status;
+            switch (service.toLowerCase()) {
+                case "database":
+                    status = systemHealthService.isDatabaseHealthy()
+                        ? ConnectionStatus.builder().connected(true).message("Base de datos conectada").build()
+                        : ConnectionStatus.builder().connected(false).message("Error en base de datos").build();
+                    break;
+                case "tmdb":
+                    status = systemHealthService.isTmdbHealthy()
+                        ? ConnectionStatus.builder().connected(true).message("TMDB API conectada").build()
+                        : ConnectionStatus.builder().connected(false).message("Error en TMDB API").build();
+                    break;
+                case "ollama":
+                    status = systemHealthService.isOllamaHealthy()
+                        ? ConnectionStatus.builder().connected(true).message("Ollama conectado").build()
+                        : ConnectionStatus.builder().connected(false).message("Error en Ollama").build();
+                    break;
+                case "email":
+                    status = ConnectionStatus.builder().connected(true).message("Configuración de email").build();
+                    break;
+                case "server":
+                    status = ConnectionStatus.builder().connected(true).message("Servidor funcionando").build();
+                    break;
+                default:
+                    return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok(status);
+        } catch (Exception e) {
+            log.error("❌ Error verificando estado del servicio {}: {}", service, e.getMessage());
+            ConnectionStatus errorStatus = ConnectionStatus.builder()
+                .connected(false)
+                .message("Error verificando servicio: " + e.getMessage())
+                .responseTimeMs(0L)
+                .lastChecked(java.time.Instant.now())
+                .build();
+            return ResponseEntity.status(500).body(errorStatus);
         }
     }
 }

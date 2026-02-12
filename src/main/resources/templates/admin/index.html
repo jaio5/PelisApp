@@ -65,34 +65,76 @@
                     <div class="card-body text-center">
                         <i class="fas fa-database fa-2x text-info mb-2"></i>
                         <h6>Base de Datos</h6>
-                        <span class="badge bg-success">Conectada</span>
+                        <span id="db-status" class="badge bg-secondary">
+                            <i class="fas fa-spinner fa-spin"></i> Verificando...
+                        </span>
+                        <div id="db-details" class="mt-2 small text-muted"></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3 mb-3">
                 <div class="card admin-card text-white">
                     <div class="card-body text-center">
-                        <i class="fas fa-envelope fa-2x text-warning mb-2"></i>
-                        <h6>Sistema Email</h6>
-                        <span class="badge bg-success">Activo</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card admin-card text-white">
-                    <div class="card-body text-center">
-                        <i class="fas fa-video fa-2x text-primary mb-2"></i>
+                        <i class="fas fa-film fa-2x text-warning mb-2"></i>
                         <h6>TMDB API</h6>
-                        <span class="badge bg-success">Conectada</span>
+                        <span id="tmdb-status" class="badge bg-secondary">
+                            <i class="fas fa-spinner fa-spin"></i> Verificando...
+                        </span>
+                        <div id="tmdb-details" class="mt-2 small text-muted"></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3 mb-3">
                 <div class="card admin-card text-white">
                     <div class="card-body text-center">
-                        <i class="fas fa-film fa-2x text-success mb-2"></i>
-                        <h6>Películas</h6>
-                        <h5 th:text="${movieCount ?: '0'}">0</h5>
+                        <i class="fas fa-robot fa-2x text-primary mb-2"></i>
+                        <h6>Ollama AI</h6>
+                        <span id="ollama-status" class="badge bg-secondary">
+                            <i class="fas fa-spinner fa-spin"></i> Verificando...
+                        </span>
+                        <div id="ollama-details" class="mt-2 small text-muted"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card admin-card text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-envelope fa-2x text-success mb-2"></i>
+                        <h6>Sistema Email</h6>
+                        <span id="email-status" class="badge bg-secondary">
+                            <i class="fas fa-spinner fa-spin"></i> Verificando...
+                        </span>
+                        <div id="email-details" class="mt-2 small text-muted"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Server Health Card -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card admin-card text-white">
+                    <div class="card-header">
+                        <h5><i class="fas fa-server me-2"></i>Estado del Servidor</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <span id="server-status" class="badge bg-secondary mb-2">
+                                    <i class="fas fa-spinner fa-spin"></i> Verificando...
+                                </span>
+                                <div id="server-message" class="text-muted"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div id="server-details" class="small"></div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button onclick="refreshSystemHealth()" class="btn btn-primary btn-sm">
+                                <i class="fas fa-sync-alt me-2"></i>Actualizar Estado
+                            </button>
+                            <small class="text-muted ms-3">Última verificación: <span id="last-check">-</span></small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -181,5 +223,147 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Cargar estado del sistema al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSystemHealth();
+        });
+
+        // Función para cargar el estado de todas las conexiones
+        async function loadSystemHealth() {
+            try {
+                console.log('🔍 Verificando estado del sistema...');
+
+                const response = await fetch('/api/system-health', {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const healthData = await response.json();
+                console.log('✅ Estado del sistema cargado:', healthData);
+
+                // Actualizar cada servicio
+                updateServiceStatus('db', 'database', healthData.database);
+                updateServiceStatus('tmdb', 'tmdb', healthData.tmdb);
+                updateServiceStatus('ollama', 'ollama', healthData.ollama);
+                updateServiceStatus('email', 'email', healthData.email);
+                updateServerStatus(healthData.server);
+
+                // Actualizar timestamp
+                document.getElementById('last-check').textContent = new Date().toLocaleTimeString();
+
+            } catch (error) {
+                console.error('❌ Error cargando estado del sistema:', error);
+
+                // Mostrar error en todos los servicios
+                const services = ['db', 'tmdb', 'ollama', 'email'];
+                services.forEach(service => {
+                    updateServiceStatus(service, service, {
+                        connected: false,
+                        message: 'Error de conexión',
+                        error: error.message
+                    });
+                });
+
+                updateServerStatus({
+                    connected: false,
+                    message: 'Error verificando servidor',
+                    error: error.message
+                });
+            }
+        }
+
+        // Función para actualizar el estado de un servicio específico
+        function updateServiceStatus(elementPrefix, serviceName, status) {
+            const statusElement = document.getElementById(`${elementPrefix}-status`);
+            const detailsElement = document.getElementById(`${elementPrefix}-details`);
+
+            if (!statusElement) {
+                console.warn(`Elemento ${elementPrefix}-status no encontrado`);
+                return;
+            }
+
+            // Actualizar badge de estado
+            statusElement.className = `badge ${status.connected ? 'bg-success' : 'bg-danger'}`;
+            statusElement.innerHTML = `
+                <i class="${status.connected ? 'fas fa-check-circle' : 'fas fa-times-circle'}"></i>
+                ${status.connected ? 'Conectado' : 'Desconectado'}
+            `;
+
+            // Actualizar detalles
+            if (detailsElement) {
+                let detailsText = status.message;
+                if (status.responseTimeMs !== undefined) {
+                    detailsText += `\n⏱️ ${status.responseTimeMs}ms`;
+                }
+                if (status.error && !status.connected) {
+                    detailsText += `\n❌ ${status.error}`;
+                }
+                detailsElement.textContent = detailsText;
+                detailsElement.style.whiteSpace = 'pre-line';
+            }
+
+            console.log(`📊 ${serviceName}: ${status.connected ? '✅' : '❌'} - ${status.message}`);
+        }
+
+        // Función para actualizar el estado del servidor
+        function updateServerStatus(status) {
+            const statusElement = document.getElementById('server-status');
+            const messageElement = document.getElementById('server-message');
+            const detailsElement = document.getElementById('server-details');
+
+            if (!statusElement) return;
+
+            // Actualizar badge de estado
+            statusElement.className = `badge ${status.connected ? 'bg-success' : 'bg-danger'} mb-2`;
+            statusElement.innerHTML = `
+                <i class="${status.connected ? 'fas fa-check-circle' : 'fas fa-times-circle'}"></i>
+                ${status.connected ? 'Funcionando' : 'Con problemas'}
+            `;
+
+            // Actualizar mensaje
+            if (messageElement) {
+                messageElement.textContent = status.message || 'Sin información';
+            }
+
+            // Actualizar detalles técnicos
+            if (detailsElement && status.details) {
+                let detailsHtml = '';
+                if (status.details.maxMemoryMB) {
+                    detailsHtml += `
+                        <div>💾 Memoria: ${status.details.usedMemoryMB}MB / ${status.details.maxMemoryMB}MB</div>
+                        <div>📊 Uso: ${status.details.memoryUsagePercent}%</div>
+                        <div>🔧 CPUs: ${status.details.availableProcessors}</div>
+                    `;
+                }
+                detailsElement.innerHTML = detailsHtml;
+            }
+        }
+
+        // Función para refrescar el estado manualmente
+        function refreshSystemHealth() {
+            // Mostrar indicador de carga
+            const services = ['db', 'tmdb', 'ollama', 'email', 'server'];
+            services.forEach(service => {
+                const element = document.getElementById(`${service}-status`);
+                if (element) {
+                    element.className = 'badge bg-secondary';
+                    element.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+                }
+            });
+
+            // Cargar nuevo estado
+            loadSystemHealth();
+        }
+
+        // Auto-refresh cada 30 segundos (opcional)
+        setInterval(loadSystemHealth, 30000);
+    </script>
 </body>
 </html>
